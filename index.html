@@ -29,7 +29,6 @@
         .checklist-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .checklist-item h4 { margin: 0 0 10px 0; font-size: 15px; color: #111827; }
         
-        /* Botones de Checklist */
         .status-options { display: flex; gap: 8px; }
         .status-btn { flex: 1; padding: 10px 0; text-align: center; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; cursor: pointer; background: white; font-weight: 500; transition: all 0.2s; }
         .status-btn.selected-C { background: #ecfdf5; border-color: var(--success); color: #047857; font-weight: 600; }
@@ -42,6 +41,7 @@
         .btn-prev { background: #f3f4f6; color: #4b5563; width: 30%; }
         .btn-prev:disabled { opacity: 0.4; }
         .btn-next { background: var(--primary); color: white; width: 65%; }
+        .btn-next:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .list-container { padding: 15px; display: grid; gap: 12px; }
         .list-item { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 15px; cursor: pointer; }
@@ -61,9 +61,18 @@
         .modal-content { background: white; width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-modal { position: absolute; top: 12px; right: 12px; background: #f3f4f6; border: none; font-size: 20px; font-weight: bold; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .btn-submit { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+        
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--primary); font-weight: bold; font-size: 18px; transition: opacity 0.3s; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--primary); animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <span>Conectando con Google Sheets...</span>
+    </div>
 
     <div class="header">
         <span style="width: 60px;"></span> 
@@ -77,9 +86,9 @@
             <div id="step1" class="step active">
                 <div class="card">
                     <h3>Datos Generales</h3>
-                    <div class="form-group"><label>Edificio</label><select id="selEdificio"><option value="">Seleccione edificio...</option></select></div>
-                    <div class="form-group"><label>Supervisor a cargo</label><select id="selSupervisor"><option value="">Seleccione supervisor...</option></select></div>
-                    <div class="form-group"><label>Personal evaluado</label><select id="selOperario"><option value="">Seleccione operario...</option></select></div>
+                    <div class="form-group"><label>Edificio</label><select id="selEdificio"><option value="">Cargando...</option></select></div>
+                    <div class="form-group"><label>Supervisor a cargo</label><select id="selSupervisor"><option value="">Cargando...</option></select></div>
+                    <div class="form-group"><label>Personal evaluado</label><select id="selOperario"><option value="">Cargando...</option></select></div>
                     <div class="form-group"><label>Fecha</label><input type="date" id="fechaVisita"></div>
                 </div>
             </div>
@@ -92,7 +101,7 @@
                 </div>
             </div>
 
-            <!-- PASO 3: OBSERVACIONES (Firma Eliminada) -->
+            <!-- PASO 3: OBSERVACIONES -->
             <div id="step3" class="step">
                 <div class="card">
                     <h3>Observaciones de la Visita</h3>
@@ -129,10 +138,11 @@
                 <div class="form-group"><label id="lblCampo1">Nombre</label><input type="text" id="addCampo1" required></div>
                 <div class="form-group"><label id="lblCampo2">Detalle</label><input type="text" id="addCampo2"></div>
                 <div class="form-group"><label>Descripción / Notas</label><textarea id="addDesc" rows="3"></textarea></div>
-                <button type="submit" class="btn-submit">Guardar</button>
+                <button type="submit" class="btn-submit" id="btnGuardarAdd">Guardar</button>
             </form>
         </div>
     </div>
+    
     <div class="modal-overlay" id="viewModal">
         <div class="modal-content" style="text-align: center;">
             <button class="close-modal" onclick="cerrarModal('viewModal')">×</button>
@@ -144,16 +154,26 @@
     </div>
 
 <script>
-    // --- TEMPORALMENTE MANTENEMOS EL LOCALSTORAGE HASTA CONECTAR GOOGLE SHEETS ---
-    let db = {
-        personal: JSON.parse(localStorage.getItem('silm_personal')) || [{ id: 1, nombre: 'Juan Pérez', calificacion: 5.0, reportes: 1, descripcion: 'Turno mañana' }],
-        supervisores: JSON.parse(localStorage.getItem('silm_supervisores')) || [{ id: 1, nombre: 'Facundo Scardino', calificacion: 5.0, reportes: 0, descripcion: 'Supervisor General' }],
-        edificios: JSON.parse(localStorage.getItem('silm_edificios')) || [{ id: 1, nombre: 'Consorcio Las Torres', direccion: 'Av. Principal 123', descripcion: '3 torres' }]
-    };
-    function guardarDB() {
-        localStorage.setItem('silm_personal', JSON.stringify(db.personal));
-        localStorage.setItem('silm_supervisores', JSON.stringify(db.supervisores));
-        localStorage.setItem('silm_edificios', JSON.stringify(db.edificios));
+    // --- URL DE TU BASE DE DATOS DE GOOGLE SHEETS ---
+    const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
+    
+    let db = { personal: [], supervisores: [], edificios: [] };
+
+    // AL ABRIR LA APP, CARGAR DATOS DESDE GOOGLE
+    async function cargarDatosNube() {
+        try {
+            const respuesta = await fetch(APP_URL);
+            const data = await respuesta.json();
+            db.personal = data.personal || [];
+            db.supervisores = data.supervisores || [];
+            db.edificios = data.edificios || [];
+            cargarListas();
+            document.getElementById('loading-screen').style.display = 'none';
+        } catch (error) {
+            console.error(error);
+            alert("Error al conectar con la base de datos de Google. Verifica tu conexión.");
+            document.getElementById('loading-screen').innerHTML = '<span>Error de conexión. Recarga la página.</span>';
+        }
     }
 
     let tabActual = 'supervision';
@@ -165,9 +185,9 @@
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
         document.getElementById('btnHeaderAdd').style.display = viewId === 'supervision' ? 'none' : 'block';
-        cargarListas();
     }
-    function getIniciales(nombre) { return nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase(); }
+    
+    function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
 
     function cargarListas() {
         document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
@@ -179,7 +199,7 @@
                 <div class="list-item" onclick="verPerfil('${tipo}', ${item.id})">
                     <div class="list-avatar">${getIniciales(item.nombre)}</div>
                     <div class="list-info"><h4 class="list-title">${item.nombre}</h4><p class="list-subtitle">${item.direccion || item.descripcion || 'Sin descripción'}</p></div>
-                    ${item.calificacion ? `<div class="list-rating">⭐ ${item.calificacion.toFixed(1)}</div>` : ''}
+                    ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
                 </div>`).join('');
         };
         renderList('personal', 'list-personal'); renderList('supervisores', 'list-supervisores'); renderList('edificios', 'list-edificios');
@@ -199,18 +219,41 @@
         document.getElementById('addModal').classList.add('active');
     }
 
-    function guardarNuevoDato(e) {
+    // MANDAR NUEVO EMPLEADO/EDIFICIO A GOOGLE SHEETS
+    async function guardarNuevoDato(e) {
         e.preventDefault();
-        const obj = { id: Date.now(), nombre: document.getElementById('addCampo1').value, descripcion: document.getElementById('addDesc').value };
-        if(tabActual === 'edificios') { obj.direccion = document.getElementById('addCampo2').value; } else { obj.calificacion = 5.0; obj.reportes = 0; }
-        db[tabActual].push(obj); guardarDB(); cerrarModal('addModal'); cargarListas();
+        const btn = document.getElementById('btnGuardarAdd');
+        btn.innerText = 'Guardando en la Nube...'; btn.disabled = true;
+
+        const id = Date.now();
+        const nombre = document.getElementById('addCampo1').value;
+        const desc = document.getElementById('addDesc').value;
+        let hoja, datosFila;
+
+        if (tabActual === 'edificios') {
+            hoja = 'Edificios'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc];
+        } else {
+            hoja = tabActual === 'personal' ? 'Personal' : 'Supervisores';
+            datosFila = [id, nombre, 5.0, 0, desc];
+        }
+
+        try {
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
+            cerrarModal('addModal');
+            document.getElementById('loading-screen').style.display = 'flex';
+            await cargarDatosNube(); // Recargar datos actualizados
+        } catch (error) {
+            alert('Error al guardar. Verifica tu conexión.');
+        } finally {
+            btn.innerText = 'Guardar'; btn.disabled = false;
+        }
     }
 
     function verPerfil(tipo, id) {
-        const item = db[tipo].find(x => x.id === id);
+        const item = db[tipo].find(x => x.id == id);
         document.getElementById('viewInitials').innerText = getIniciales(item.nombre); document.getElementById('viewTitle').innerText = item.nombre;
         document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones recibidas: ${item.reportes}`;
-        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${item.calificacion.toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
+        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
         document.getElementById('viewModal').classList.add('active');
     }
     function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -222,7 +265,7 @@
 
     const checklistContainer = document.getElementById('checklist-container');
     puntos.forEach((punto, index) => {
-        reporteActual[index] = { estado: null, fotoBase64: null };
+        reporteActual[index] = { estado: null, fotoSacada: false };
         checklistContainer.innerHTML += `
             <div class="checklist-item">
                 <h4>${punto}</h4>
@@ -231,7 +274,6 @@
                     <div class="status-btn" id="btn-D-${index}" onclick="setEstado(${index}, 'D')">❌ Mal</div>
                     <div class="status-btn btn-camera" id="btn-foto-${index}" onclick="abrirCamara(${index})">📸 Foto</div>
                 </div>
-                <!-- Input oculto que invoca la cámara del celular -->
                 <input type="file" id="input-foto-${index}" accept="image/*" capture="environment" style="display:none;" onchange="fotoTomada(${index}, this)">
             </div>
         `;
@@ -251,18 +293,18 @@
             const btn = document.getElementById(`btn-foto-${index}`);
             btn.classList.add('photo-taken');
             btn.innerHTML = '✅ Lista';
-            
-            // Convierte la foto a texto (Base64) para poder mandarla luego a la nube
-            const reader = new FileReader();
-            reader.onload = function(e) { reporteActual[index].fotoBase64 = e.target.result; };
-            reader.readAsDataURL(input.files[0]);
+            reporteActual[index].fotoSacada = true; 
+            // La foto queda en el celular. Para subirla directo a Drive requiere una API avanzada.
+            // Por ahora registramos que SI se tomó foto como evidencia en el Excel.
         }
     }
 
     let pasoActual = 1;
     function cambiarPaso(direccion) {
         if(pasoActual === 1 && direccion === 1) {
-            if(!document.getElementById('selEdificio').value || !document.getElementById('selOperario').value) { alert("Selecciona Edificio y Operario."); return; }
+            if(!document.getElementById('selEdificio').value || !document.getElementById('selOperario').value || !document.getElementById('selSupervisor').value) { 
+                alert("Completa todos los datos generales para avanzar."); return; 
+            }
         }
         document.getElementById(`step${pasoActual}`).classList.remove('active');
         pasoActual += direccion;
@@ -271,7 +313,7 @@
         
         const btnNext = document.getElementById('btnNext');
         if (pasoActual === 3) {
-            btnNext.innerText = 'Guardar en la Nube (Simulado)';
+            btnNext.innerText = 'Subir Reporte a Google Sheets';
             btnNext.onclick = finalizarReporte;
         } else {
             btnNext.innerText = 'Siguiente'; btnNext.onclick = () => cambiarPaso(1);
@@ -279,26 +321,58 @@
         document.querySelector('.main-content').scrollTop = 0;
     }
 
-    function finalizarReporte() {
-        let ptos = 0; let suma = 0;
+    // MANDAR REPORTE A GOOGLE Y ACTUALIZAR NOTA DEL EMPLEADO
+    async function finalizarReporte() {
+        const btnNext = document.getElementById('btnNext');
+        btnNext.innerText = 'Subiendo... no cierres la app';
+        btnNext.disabled = true;
+
+        let ptos = 0; let suma = 0; let hayEvidenciaFotografica = "No";
         Object.values(reporteActual).forEach(val => {
             if(val.estado === 'C') { suma += 5; ptos++; }
             if(val.estado === 'D') { suma += 1; ptos++; }
+            if(val.fotoSacada) { hayEvidenciaFotografica = "Sí (en dispositivo)"; }
         });
         const puntaje = ptos > 0 ? (suma / ptos) : 5;
 
-        const idOperario = parseInt(document.getElementById('selOperario').value);
-        const operario = db.personal.find(p => p.id === idOperario);
-        if(operario) {
-            operario.calificacion = ((operario.calificacion * operario.reportes) + puntaje) / (operario.reportes + 1);
-            operario.reportes += 1;
+        // Obtener nombres para la hoja de reportes (más fácil de leer)
+        const idEd = document.getElementById('selEdificio').value;
+        const nEdificio = db.edificios.find(e => e.id == idEd).nombre;
+        
+        const idSup = document.getElementById('selSupervisor').value;
+        const nSupervisor = db.supervisores.find(s => s.id == idSup).nombre;
+        
+        const idOp = document.getElementById('selOperario').value;
+        const operario = db.personal.find(p => p.id == idOp);
+        const nOperario = operario.nombre;
+        
+        const fecha = document.getElementById('fechaVisita').value;
+        const obs = document.getElementById('observacionesFinales').value;
+
+        // Calcular nueva nota para el operario
+        let nuevosRep = (Number(operario.reportes) || 0) + 1;
+        let calActual = Number(operario.calificacion) || 5.0;
+        let nuevaCalificacion = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
+
+        const filaReporte = [fecha, nEdificio, nSupervisor, nOperario, puntaje.toFixed(1), obs, hayEvidenciaFotografica];
+
+        try {
+            // 1. Guardar el reporte
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'Reportes', datos: filaReporte }) });
+            // 2. Actualizar las estrellas del empleado
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCalificacion, nuevosReportes: nuevosRep }) });
+            
+            alert(`¡Reporte subido exitosamente a la nube!\nCalificación de esta visita: ${puntaje.toFixed(1)} estrellas.`);
+            window.location.reload();
+        } catch (error) {
+            alert('Error al enviar. Revisa tu conexión a internet.');
+            btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false;
         }
-        guardarDB(); cargarListas();
-        alert(`¡Reporte procesado!\nCalificación: ${puntaje.toFixed(1)} estrellas.\n(Próximamente esto se subirá directo a tu Google Sheets).`);
-        window.location.reload();
     }
 
-    cargarListas();
+    // Iniciar
+    window.onload = cargarDatosNube;
+
 </script>
 </body>
 </html>
