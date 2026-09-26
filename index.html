@@ -31,7 +31,7 @@
         
         .form-group { margin-bottom: 16px; }
         label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #4b5563; }
-        input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f9fafb; }
+        input[type="text"], input[type="password"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f9fafb; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background-color: white; }
         
         .checklist-item { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
@@ -91,11 +91,18 @@
                 </div>
                 <div class="form-group">
                     <label>Rango de Acceso</label>
-                    <select id="loginRango" required>
+                    <!-- Al cambiar de opción, verifica si debe mostrar la contraseña -->
+                    <select id="loginRango" required onchange="verificarRango()">
                         <option value="supervisor">Supervisor (Solo Reportes)</option>
                         <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
                     </select>
                 </div>
+                <!-- CAJA DE CONTRASEÑA OCULTA -->
+                <div class="form-group" id="cajaPassword" style="display: none;">
+                    <label>Contraseña de Acceso</label>
+                    <input type="password" id="loginPassword" placeholder="Solo para Jefes">
+                </div>
+                
                 <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
             </form>
         </div>
@@ -201,26 +208,52 @@
         }
     };
 
+    function verificarRango() {
+        const rango = document.getElementById('loginRango').value;
+        // Si elige "Jefe", muestra el input de contraseña
+        document.getElementById('cajaPassword').style.display = (rango === 'jefe') ? 'block' : 'none';
+    }
+
     function iniciarApp(e) {
         e.preventDefault();
         const btn = document.getElementById('btnIngresar');
         
-        usuarioActual.nombre = document.getElementById('loginNombre').value + ' ' + document.getElementById('loginApellido').value;
-        usuarioActual.rango = document.getElementById('loginRango').value;
+        // Formatear el nombre ingresado para compararlo fácil (sin importar si usa mayúsculas o minúsculas)
+        const nombreInput = document.getElementById('loginNombre').value.trim();
+        const apellidoInput = document.getElementById('loginApellido').value.trim();
+        const nombreCompleto = (nombreInput + ' ' + apellidoInput).toLowerCase();
+        
+        const rango = document.getElementById('loginRango').value;
+        const pass = document.getElementById('loginPassword').value;
 
-        if (datosListos) {
-            acceder();
-        } else {
-            btn.innerText = 'Sincronizando base de datos...';
-            btn.disabled = true;
-            // Esperar a que la carga fantasma termine
-            let intervalo = setInterval(() => {
-                if (datosListos) {
-                    clearInterval(intervalo);
-                    acceder();
-                }
-            }, 500);
+        if (!datosListos) {
+            btn.innerText = 'Sincronizando datos...';
+            // Volverá a la normalidad en 1 segundo y el usuario tendrá que tocar ingresar otra vez
+            setTimeout(() => { btn.innerText = 'Ingresar'; }, 1500);
+            return;
         }
+
+        // --- SISTEMA DE SEGURIDAD ---
+        if (rango === 'supervisor') {
+            // Buscamos si el nombre ingresado coincide con alguno en la hoja "Supervisores"
+            const existeSupervisor = db.supervisores.find(s => s.nombre.toLowerCase() === nombreCompleto);
+            if (!existeSupervisor) {
+                alert("❌ ACCESO DENEGADO: Tu nombre no se encuentra registrado en la base de datos de Supervisores de SILM.");
+                return; // Corta la función acá, no lo deja entrar
+            }
+            usuarioActual.nombre = existeSupervisor.nombre; // Guardamos el nombre exacto como figura en la base de datos
+        } 
+        else if (rango === 'jefe') {
+            // Contraseña maestra para Jefes (puedes cambiar "Silm2026" por la clave que prefieras)
+            if (pass !== 'Silm2026') {
+                alert("❌ ACCESO DENEGADO: Contraseña de Jefe incorrecta.");
+                return; // Corta la función acá
+            }
+            usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
+        }
+
+        usuarioActual.rango = rango;
+        acceder();
     }
 
     function acceder() {
@@ -231,6 +264,15 @@
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
             document.getElementById('btnHeaderAdd').style.display = 'none';
+            // Pre-seleccionar automáticamente al supervisor en el formulario
+            const selectSup = document.getElementById('selSupervisor');
+            for(let i=0; i<selectSup.options.length; i++) {
+                if(selectSup.options[i].text === usuarioActual.nombre) {
+                    selectSup.selectedIndex = i;
+                    selectSup.disabled = true; // Lo bloquea para que no pueda hacer reportes a nombre de otro
+                    break;
+                }
+            }
         }
     }
 
@@ -298,7 +340,7 @@
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
-            // Recargar datos para que se vea reflejado
+            // Recargar datos
             const resp = await fetch(APP_URL); const data = await resp.json();
             db[tabActual] = data[tabActual.toLowerCase()]; cargarListas();
             cerrarModal('addModal');
@@ -314,7 +356,6 @@
         document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
         document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
         
-        // Mostrar botón borrar solo si es Jefe
         document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe') ? 'block' : 'none';
         document.getElementById('viewModal').classList.add('active');
     }
@@ -329,7 +370,6 @@
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
-            // Quitar localmente de la vista para no tener que recargar toda la base de datos
             db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
             cargarListas(); cerrarModal('viewModal');
         } catch(error) {
