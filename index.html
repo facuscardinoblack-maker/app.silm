@@ -14,8 +14,7 @@
         .login-box { background: white; color: var(--text); padding: 30px; border-radius: 16px; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .login-box h2 { margin: 0 0 20px 0; text-align: center; color: var(--primary); }
         .login-box .form-group label { color: #4b5563; }
-        .login-btn { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; transition: background 0.3s; }
-        .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .login-btn { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
 
         .header { background: var(--primary); color: white; padding: 16px 20px; text-align: center; font-weight: 600; font-size: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 10; display: flex; justify-content: space-between; align-items: center; }
         .header-action { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: none; }
@@ -71,6 +70,11 @@
         .close-modal { position: absolute; top: 12px; right: 12px; background: #f3f4f6; border: none; font-size: 20px; font-weight: bold; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .btn-submit { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         .btn-danger { width: 100%; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+        
+        /* PANTALLA DE ÉXITO Y COMPARTIR */
+        #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; box-sizing: border-box; }
+        #success-screen.active { display: flex; }
+        .success-icon { width: 70px; height: 70px; background: #ecfdf5; color: var(--success); font-size: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -81,31 +85,29 @@
         <div class="login-box">
             <h2>Iniciar Sesión</h2>
             <form id="formLogin" onsubmit="iniciarApp(event)">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" id="loginNombre" required placeholder="Ej: Facundo">
-                </div>
-                <div class="form-group">
-                    <label>Apellido</label>
-                    <input type="text" id="loginApellido" required placeholder="Ej: Scardino">
-                </div>
+                <div class="form-group"><label>Nombre</label><input type="text" id="loginNombre" required placeholder="Ej: Facundo"></div>
+                <div class="form-group"><label>Apellido</label><input type="text" id="loginApellido" required placeholder="Ej: Scardino"></div>
                 <div class="form-group">
                     <label>Rango de Acceso</label>
-                    <!-- Al cambiar de opción, verifica si debe mostrar la contraseña -->
                     <select id="loginRango" required onchange="verificarRango()">
                         <option value="supervisor">Supervisor (Solo Reportes)</option>
                         <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
                     </select>
                 </div>
-                <!-- CAJA DE CONTRASEÑA OCULTA -->
-                <div class="form-group" id="cajaPassword" style="display: none;">
-                    <label>Contraseña de Acceso</label>
-                    <input type="password" id="loginPassword" placeholder="Solo para Jefes">
-                </div>
-                
+                <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Clave de Jefe"></div>
                 <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
             </form>
         </div>
+    </div>
+
+    <!-- PANTALLA DE ÉXITO POST-REPORTE -->
+    <div id="success-screen">
+        <div class="success-icon">✓</div>
+        <h2>¡Reporte Guardado con Éxito!</h2>
+        <p id="successDetails" style="color: #6b7280; margin-bottom: 25px;"></p>
+        <button class="btn-submit" style="background: #25d366; margin-bottom: 10px;" onclick="enviarWhatsApp()">📲 Enviar Resumen por WhatsApp</button>
+        <button class="btn-submit" style="background: #4b5563; margin-bottom: 10px;" onclick="window.print()">🖨️ Descargar / Imprimir PDF</button>
+        <button class="btn-submit" style="background: var(--primary);" onclick="window.location.reload()">🔄 Nuevo Reporte</button>
     </div>
 
     <div class="header">
@@ -136,9 +138,7 @@
             <div id="step3" class="step">
                 <div class="card">
                     <h3>Observaciones de la Visita</h3>
-                    <div class="form-group">
-                        <textarea id="observacionesFinales" rows="6" placeholder="Escribe aquí las instrucciones o detalles del reporte..."></textarea>
-                    </div>
+                    <div class="form-group"><textarea id="observacionesFinales" rows="6" placeholder="Escribe aquí las instrucciones o detalles del reporte..."></textarea></div>
                 </div>
             </div>
 
@@ -192,8 +192,8 @@
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
+    let ultimoReporteTexto = ""; // Para armar el mensaje de WhatsApp
 
-    // INICIAR DESCARGA FANTASMA APENAS SE ABRE LA WEB
     window.onload = async () => {
         try {
             const respuesta = await fetch(APP_URL);
@@ -202,53 +202,30 @@
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
             datosListos = true;
-        } catch (error) {
-            console.error(error);
-            alert("Error de conexión. Recarga la página.");
-        }
+        } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
 
     function verificarRango() {
         const rango = document.getElementById('loginRango').value;
-        // Si elige "Jefe", muestra el input de contraseña
         document.getElementById('cajaPassword').style.display = (rango === 'jefe') ? 'block' : 'none';
     }
 
     function iniciarApp(e) {
         e.preventDefault();
-        const btn = document.getElementById('btnIngresar');
-        
-        // Formatear el nombre ingresado para compararlo fácil (sin importar si usa mayúsculas o minúsculas)
         const nombreInput = document.getElementById('loginNombre').value.trim();
         const apellidoInput = document.getElementById('loginApellido').value.trim();
         const nombreCompleto = (nombreInput + ' ' + apellidoInput).toLowerCase();
-        
         const rango = document.getElementById('loginRango').value;
         const pass = document.getElementById('loginPassword').value;
 
-        if (!datosListos) {
-            btn.innerText = 'Sincronizando datos...';
-            // Volverá a la normalidad en 1 segundo y el usuario tendrá que tocar ingresar otra vez
-            setTimeout(() => { btn.innerText = 'Ingresar'; }, 1500);
-            return;
-        }
+        if (!datosListos) { alert("Sincronizando datos, aguarda un segundo..."); return; }
 
-        // --- SISTEMA DE SEGURIDAD ---
         if (rango === 'supervisor') {
-            // Buscamos si el nombre ingresado coincide con alguno en la hoja "Supervisores"
             const existeSupervisor = db.supervisores.find(s => s.nombre.toLowerCase() === nombreCompleto);
-            if (!existeSupervisor) {
-                alert("❌ ACCESO DENEGADO: Tu nombre no se encuentra registrado en la base de datos de Supervisores de SILM.");
-                return; // Corta la función acá, no lo deja entrar
-            }
-            usuarioActual.nombre = existeSupervisor.nombre; // Guardamos el nombre exacto como figura en la base de datos
-        } 
-        else if (rango === 'jefe') {
-            // Contraseña maestra para Jefes (puedes cambiar "Silm2026" por la clave que prefieras)
-            if (pass !== 'Silm2026') {
-                alert("❌ ACCESO DENEGADO: Contraseña de Jefe incorrecta.");
-                return; // Corta la función acá
-            }
+            if (!existeSupervisor) { alert("❌ ACCESO DENEGADO: No estás registrado como Supervisor."); return; }
+            usuarioActual.nombre = existeSupervisor.nombre;
+        } else if (rango === 'jefe') {
+            if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         }
 
@@ -259,19 +236,12 @@
     function acceder() {
         document.getElementById('login-screen').classList.add('hidden');
         cargarListas();
-        
-        // APLICAR ROLES
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
             document.getElementById('btnHeaderAdd').style.display = 'none';
-            // Pre-seleccionar automáticamente al supervisor en el formulario
             const selectSup = document.getElementById('selSupervisor');
             for(let i=0; i<selectSup.options.length; i++) {
-                if(selectSup.options[i].text === usuarioActual.nombre) {
-                    selectSup.selectedIndex = i;
-                    selectSup.disabled = true; // Lo bloquea para que no pueda hacer reportes a nombre de otro
-                    break;
-                }
+                if(selectSup.options[i].text === usuarioActual.nombre) { selectSup.selectedIndex = i; selectSup.disabled = true; break; }
             }
         }
     }
@@ -284,13 +254,7 @@
         document.getElementById(`view-${viewId}`).classList.add('active');
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
-        
-        // Solo mostrar botón "Nuevo" si es Jefe y no está en la pestaña Supervisión
-        if (usuarioActual.rango === 'jefe' && viewId !== 'supervision') {
-            document.getElementById('btnHeaderAdd').style.display = 'block';
-        } else {
-            document.getElementById('btnHeaderAdd').style.display = 'none';
-        }
+        document.getElementById('btnHeaderAdd').style.display = (usuarioActual.rango === 'jefe' && viewId !== 'supervision') ? 'block' : 'none';
     }
     
     function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
@@ -329,7 +293,6 @@
         e.preventDefault();
         const btn = document.getElementById('btnGuardarAdd');
         btn.innerText = 'Guardando...'; btn.disabled = true;
-
         const id = Date.now();
         const nombre = document.getElementById('addCampo1').value;
         const desc = document.getElementById('addDesc').value;
@@ -340,7 +303,6 @@
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
-            // Recargar datos
             const resp = await fetch(APP_URL); const data = await resp.json();
             db[tabActual] = data[tabActual.toLowerCase()]; cargarListas();
             cerrarModal('addModal');
@@ -351,32 +313,24 @@
     function verPerfil(tipo, id) {
         perfilActivo = { tipo: tipo, id: id };
         const item = db[tipo].find(x => x.id == id);
-        
         document.getElementById('viewInitials').innerText = getIniciales(item.nombre); document.getElementById('viewTitle').innerText = item.nombre;
         document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
         document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
-        
         document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe') ? 'block' : 'none';
         document.getElementById('viewModal').classList.add('active');
     }
 
     async function ejecutarEliminar() {
-        if(!confirm('¿Estás seguro de eliminar permanentemente este registro de la base de datos?')) return;
-        
+        if(!confirm('¿Eliminar permanentemente este registro?')) return;
         const btn = document.getElementById('btnEliminarRegistro');
         btn.innerText = 'Eliminando...'; btn.disabled = true;
-        
         let nombreHoja = perfilActivo.tipo.charAt(0).toUpperCase() + perfilActivo.tipo.slice(1);
-
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
             db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
             cargarListas(); cerrarModal('viewModal');
-        } catch(error) {
-            alert('Error al eliminar. Revisa tu conexión.');
-        } finally {
-            btn.innerText = 'Eliminar Registro'; btn.disabled = false;
-        }
+        } catch(error) { alert('Error al eliminar.'); } 
+        finally { btn.innerText = 'Eliminar Registro'; btn.disabled = false; }
     }
 
     function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -423,7 +377,7 @@
     function cambiarPaso(direccion) {
         if(pasoActual === 1 && direccion === 1) {
             if(!document.getElementById('selEdificio').value || !document.getElementById('selOperario').value || !document.getElementById('selSupervisor').value) { 
-                alert("Completa todos los datos generales para avanzar."); return; 
+                alert("Completa todos los datos generales."); return; 
             }
         }
         document.getElementById(`step${pasoActual}`).classList.remove('active');
@@ -433,17 +387,38 @@
         
         const btnNext = document.getElementById('btnNext');
         if (pasoActual === 3) {
-            btnNext.innerText = 'Subir Reporte a Google Sheets'; btnNext.onclick = finalizarReporte;
+            btnNext.innerText = 'Finalizar y Enviar con GPS'; btnNext.onclick = finalizarReporteConGPS;
         } else {
             btnNext.innerText = 'Siguiente'; btnNext.onclick = () => cambiarPaso(1);
         }
         document.querySelector('.main-content').scrollTop = 0;
     }
 
-    async function finalizarReporte() {
+    // --- FUNCIÓN DE GPS Y ENVÍO A LA NUBE ---
+    function finalizarReporteConGPS() {
         const btnNext = document.getElementById('btnNext');
-        btnNext.innerText = 'Subiendo... no cierres la app'; btnNext.disabled = true;
+        btnNext.innerText = 'Obteniendo GPS...'; btnNext.disabled = true;
 
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const gpsLink = `https://maps.google.com/?q=${lat},${lon}`;
+                    enviarDatosFinales(gpsLink);
+                },
+                (error) => {
+                    // Si el usuario niega el GPS o falla, igual sube el reporte sin bloquearlo
+                    enviarDatosFinales("GPS No Disponible");
+                },
+                { timeout: 10000 }
+            );
+        } else {
+            enviarDatosFinales("GPS No Soportado");
+        }
+    }
+
+    async function enviarDatosFinales(ubicacionGPS) {
         let ptos = 0; let suma = 0; let hayEvidencia = "No";
         Object.values(reporteActual).forEach(val => {
             if(val.estado === 'C') { suma += 5; ptos++; }
@@ -461,17 +436,27 @@
         let calActual = Number(operario.calificacion) || 5.0;
         let nuevaCal = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
 
-        const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia];
+        // Fila para Google Sheets (Incluyendo la ubicación GPS al final)
+        const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia, ubicacionGPS];
+
+        // Texto preparado para WhatsApp
+        ultimoReporteTexto = `📋 *REPORTE DE SUPERVISIÓN SILM*%0A📅 Fecha: ${fecha}%0A🏢 Edificio: ${nEdificio}%0A👔 Supervisor: ${nSupervisor}%0A👷 Operario: ${operario.nombre}%0A⭐ Calificación: ${puntaje.toFixed(1)} / 5.0%0A📝 Obs: ${obs || 'Ninguna'}%0A📍 Ubicación GPS: ${ubicacionGPS}`;
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'Reportes', datos: filaReporte }) });
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
-            alert(`¡Reporte subido!\nCalificación: ${puntaje.toFixed(1)} estrellas.`);
-            window.location.reload();
+            
+            // Mostrar pantalla de éxito
+            document.getElementById('successDetails').innerText = `Edificio: ${nEdificio} | Operario: ${operario.nombre} | Nota: ${puntaje.toFixed(1)} ⭐`;
+            document.getElementById('success-screen').classList.add('active');
         } catch (error) {
             alert('Error al enviar. Revisa tu conexión a internet.');
             btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false;
         }
+    }
+
+    function enviarWhatsApp() {
+        window.open(`https://api.whatsapp.com/send?text=${ultimoReporteTexto}`, '_blank');
     }
 </script>
 </body>
