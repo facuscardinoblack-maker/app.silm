@@ -8,6 +8,15 @@
         :root { --primary: #1e3a8a; --accent: #3b82f6; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --success: #10b981; --danger: #ef4444; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         
+        /* LOGIN SCREEN */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.4s; }
+        #login-screen.hidden { opacity: 0; pointer-events: none; }
+        .login-box { background: white; color: var(--text); padding: 30px; border-radius: 16px; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .login-box h2 { margin: 0 0 20px 0; text-align: center; color: var(--primary); }
+        .login-box .form-group label { color: #4b5563; }
+        .login-btn { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; transition: background 0.3s; }
+        .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
         .header { background: var(--primary); color: white; padding: 16px 20px; text-align: center; font-weight: 600; font-size: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 10; display: flex; justify-content: space-between; align-items: center; }
         .header-action { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: none; }
         
@@ -61,17 +70,35 @@
         .modal-content { background: white; width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-modal { position: absolute; top: 12px; right: 12px; background: #f3f4f6; border: none; font-size: 20px; font-weight: bold; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .btn-submit { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
-        
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--primary); font-weight: bold; font-size: 18px; transition: opacity 0.3s; }
-        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--primary); animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-danger { width: 100%; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <span>Conectando con Google Sheets...</span>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen">
+        <h1 style="margin-bottom: 30px; font-size: 32px; font-weight: 800; letter-spacing: 2px;">SILM</h1>
+        <div class="login-box">
+            <h2>Iniciar Sesión</h2>
+            <form id="formLogin" onsubmit="iniciarApp(event)">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="loginNombre" required placeholder="Ej: Facundo">
+                </div>
+                <div class="form-group">
+                    <label>Apellido</label>
+                    <input type="text" id="loginApellido" required placeholder="Ej: Scardino">
+                </div>
+                <div class="form-group">
+                    <label>Rango de Acceso</label>
+                    <select id="loginRango" required>
+                        <option value="supervisor">Supervisor (Solo Reportes)</option>
+                        <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
+                    </select>
+                </div>
+                <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
+            </form>
+        </div>
     </div>
 
     <div class="header">
@@ -82,7 +109,6 @@
     
     <div class="main-content">
         <div id="view-supervision" class="view active">
-            <!-- PASO 1 -->
             <div id="step1" class="step active">
                 <div class="card">
                     <h3>Datos Generales</h3>
@@ -93,7 +119,6 @@
                 </div>
             </div>
 
-            <!-- PASO 2: CHECKLIST Y CÁMARA -->
             <div id="step2" class="step">
                 <div class="card">
                     <h3>Áreas Obligatorias</h3>
@@ -101,7 +126,6 @@
                 </div>
             </div>
 
-            <!-- PASO 3: OBSERVACIONES -->
             <div id="step3" class="step">
                 <div class="card">
                     <h3>Observaciones de la Visita</h3>
@@ -125,7 +149,7 @@
     <div class="bottom-tabs">
         <button class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
         <button class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
-        <button class="tab-btn" onclick="switchTab('supervisores', this, 'Supervisores')"><i>👔</i><span>Supervisores</span></button>
+        <button id="tab-supervisores" class="tab-btn" onclick="switchTab('supervisores', this, 'Supervisores')"><i>👔</i><span>Supervisores</span></button>
         <button class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
     </div>
 
@@ -150,29 +174,63 @@
             <h2 id="viewTitle" style="margin:0 0 5px 0;">Nombre</h2>
             <p id="viewSubtitle" style="color:#6b7280; margin:0 0 15px 0; font-size:14px;"></p>
             <div id="viewExtra" style="background:#f9fafb; padding:15px; border-radius:8px; text-align:left; font-size:14px; line-height:1.5;"></div>
+            <button id="btnEliminarRegistro" class="btn-danger" style="display:none;" onclick="ejecutarEliminar()">Eliminar Registro</button>
         </div>
     </div>
 
 <script>
-    // --- URL DE TU BASE DE DATOS DE GOOGLE SHEETS ---
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
     let db = { personal: [], supervisores: [], edificios: [] };
+    let datosListos = false;
+    let usuarioActual = { nombre: '', rango: '' };
+    let perfilActivo = { tipo: '', id: null };
 
-    // AL ABRIR LA APP, CARGAR DATOS DESDE GOOGLE
-    async function cargarDatosNube() {
+    // INICIAR DESCARGA FANTASMA APENAS SE ABRE LA WEB
+    window.onload = async () => {
         try {
             const respuesta = await fetch(APP_URL);
             const data = await respuesta.json();
             db.personal = data.personal || [];
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
-            cargarListas();
-            document.getElementById('loading-screen').style.display = 'none';
+            datosListos = true;
         } catch (error) {
             console.error(error);
-            alert("Error al conectar con la base de datos de Google. Verifica tu conexión.");
-            document.getElementById('loading-screen').innerHTML = '<span>Error de conexión. Recarga la página.</span>';
+            alert("Error de conexión. Recarga la página.");
+        }
+    };
+
+    function iniciarApp(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnIngresar');
+        
+        usuarioActual.nombre = document.getElementById('loginNombre').value + ' ' + document.getElementById('loginApellido').value;
+        usuarioActual.rango = document.getElementById('loginRango').value;
+
+        if (datosListos) {
+            acceder();
+        } else {
+            btn.innerText = 'Sincronizando base de datos...';
+            btn.disabled = true;
+            // Esperar a que la carga fantasma termine
+            let intervalo = setInterval(() => {
+                if (datosListos) {
+                    clearInterval(intervalo);
+                    acceder();
+                }
+            }, 500);
+        }
+    }
+
+    function acceder() {
+        document.getElementById('login-screen').classList.add('hidden');
+        cargarListas();
+        
+        // APLICAR ROLES
+        if (usuarioActual.rango === 'supervisor') {
+            document.getElementById('tab-supervisores').style.display = 'none';
+            document.getElementById('btnHeaderAdd').style.display = 'none';
         }
     }
 
@@ -184,7 +242,13 @@
         document.getElementById(`view-${viewId}`).classList.add('active');
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
-        document.getElementById('btnHeaderAdd').style.display = viewId === 'supervision' ? 'none' : 'block';
+        
+        // Solo mostrar botón "Nuevo" si es Jefe y no está en la pestaña Supervisión
+        if (usuarioActual.rango === 'jefe' && viewId !== 'supervision') {
+            document.getElementById('btnHeaderAdd').style.display = 'block';
+        } else {
+            document.getElementById('btnHeaderAdd').style.display = 'none';
+        }
     }
     
     function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
@@ -219,43 +283,62 @@
         document.getElementById('addModal').classList.add('active');
     }
 
-    // MANDAR NUEVO EMPLEADO/EDIFICIO A GOOGLE SHEETS
     async function guardarNuevoDato(e) {
         e.preventDefault();
         const btn = document.getElementById('btnGuardarAdd');
-        btn.innerText = 'Guardando en la Nube...'; btn.disabled = true;
+        btn.innerText = 'Guardando...'; btn.disabled = true;
 
         const id = Date.now();
         const nombre = document.getElementById('addCampo1').value;
         const desc = document.getElementById('addDesc').value;
         let hoja, datosFila;
 
-        if (tabActual === 'edificios') {
-            hoja = 'Edificios'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc];
-        } else {
-            hoja = tabActual === 'personal' ? 'Personal' : 'Supervisores';
-            datosFila = [id, nombre, 5.0, 0, desc];
-        }
+        if (tabActual === 'edificios') { hoja = 'Edificios'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc]; } 
+        else { hoja = tabActual === 'personal' ? 'Personal' : 'Supervisores'; datosFila = [id, nombre, 5.0, 0, desc]; }
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
+            // Recargar datos para que se vea reflejado
+            const resp = await fetch(APP_URL); const data = await resp.json();
+            db[tabActual] = data[tabActual.toLowerCase()]; cargarListas();
             cerrarModal('addModal');
-            document.getElementById('loading-screen').style.display = 'flex';
-            await cargarDatosNube(); // Recargar datos actualizados
-        } catch (error) {
-            alert('Error al guardar. Verifica tu conexión.');
-        } finally {
-            btn.innerText = 'Guardar'; btn.disabled = false;
-        }
+        } catch (error) { alert('Error al guardar.'); } 
+        finally { btn.innerText = 'Guardar'; btn.disabled = false; }
     }
 
     function verPerfil(tipo, id) {
+        perfilActivo = { tipo: tipo, id: id };
         const item = db[tipo].find(x => x.id == id);
+        
         document.getElementById('viewInitials').innerText = getIniciales(item.nombre); document.getElementById('viewTitle').innerText = item.nombre;
-        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones recibidas: ${item.reportes}`;
+        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
         document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
+        
+        // Mostrar botón borrar solo si es Jefe
+        document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe') ? 'block' : 'none';
         document.getElementById('viewModal').classList.add('active');
     }
+
+    async function ejecutarEliminar() {
+        if(!confirm('¿Estás seguro de eliminar permanentemente este registro de la base de datos?')) return;
+        
+        const btn = document.getElementById('btnEliminarRegistro');
+        btn.innerText = 'Eliminando...'; btn.disabled = true;
+        
+        let nombreHoja = perfilActivo.tipo.charAt(0).toUpperCase() + perfilActivo.tipo.slice(1);
+
+        try {
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
+            // Quitar localmente de la vista para no tener que recargar toda la base de datos
+            db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
+            cargarListas(); cerrarModal('viewModal');
+        } catch(error) {
+            alert('Error al eliminar. Revisa tu conexión.');
+        } finally {
+            btn.innerText = 'Eliminar Registro'; btn.disabled = false;
+        }
+    }
+
     function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
 
     // --- CHECKLIST Y CÁMARA ---
@@ -291,11 +374,8 @@
     function fotoTomada(index, input) {
         if(input.files && input.files[0]) {
             const btn = document.getElementById(`btn-foto-${index}`);
-            btn.classList.add('photo-taken');
-            btn.innerHTML = '✅ Lista';
+            btn.classList.add('photo-taken'); btn.innerHTML = '✅ Lista';
             reporteActual[index].fotoSacada = true; 
-            // La foto queda en el celular. Para subirla directo a Drive requiere una API avanzada.
-            // Por ahora registramos que SI se tomó foto como evidencia en el Excel.
         }
     }
 
@@ -313,66 +393,46 @@
         
         const btnNext = document.getElementById('btnNext');
         if (pasoActual === 3) {
-            btnNext.innerText = 'Subir Reporte a Google Sheets';
-            btnNext.onclick = finalizarReporte;
+            btnNext.innerText = 'Subir Reporte a Google Sheets'; btnNext.onclick = finalizarReporte;
         } else {
             btnNext.innerText = 'Siguiente'; btnNext.onclick = () => cambiarPaso(1);
         }
         document.querySelector('.main-content').scrollTop = 0;
     }
 
-    // MANDAR REPORTE A GOOGLE Y ACTUALIZAR NOTA DEL EMPLEADO
     async function finalizarReporte() {
         const btnNext = document.getElementById('btnNext');
-        btnNext.innerText = 'Subiendo... no cierres la app';
-        btnNext.disabled = true;
+        btnNext.innerText = 'Subiendo... no cierres la app'; btnNext.disabled = true;
 
-        let ptos = 0; let suma = 0; let hayEvidenciaFotografica = "No";
+        let ptos = 0; let suma = 0; let hayEvidencia = "No";
         Object.values(reporteActual).forEach(val => {
             if(val.estado === 'C') { suma += 5; ptos++; }
             if(val.estado === 'D') { suma += 1; ptos++; }
-            if(val.fotoSacada) { hayEvidenciaFotografica = "Sí (en dispositivo)"; }
+            if(val.fotoSacada) { hayEvidencia = "Sí"; }
         });
         const puntaje = ptos > 0 ? (suma / ptos) : 5;
 
-        // Obtener nombres para la hoja de reportes (más fácil de leer)
-        const idEd = document.getElementById('selEdificio').value;
-        const nEdificio = db.edificios.find(e => e.id == idEd).nombre;
-        
-        const idSup = document.getElementById('selSupervisor').value;
-        const nSupervisor = db.supervisores.find(s => s.id == idSup).nombre;
-        
-        const idOp = document.getElementById('selOperario').value;
-        const operario = db.personal.find(p => p.id == idOp);
-        const nOperario = operario.nombre;
-        
-        const fecha = document.getElementById('fechaVisita').value;
-        const obs = document.getElementById('observacionesFinales').value;
+        const idEd = document.getElementById('selEdificio').value; const nEdificio = db.edificios.find(e => e.id == idEd).nombre;
+        const idSup = document.getElementById('selSupervisor').value; const nSupervisor = db.supervisores.find(s => s.id == idSup).nombre;
+        const idOp = document.getElementById('selOperario').value; const operario = db.personal.find(p => p.id == idOp);
+        const fecha = document.getElementById('fechaVisita').value; const obs = document.getElementById('observacionesFinales').value;
 
-        // Calcular nueva nota para el operario
         let nuevosRep = (Number(operario.reportes) || 0) + 1;
         let calActual = Number(operario.calificacion) || 5.0;
-        let nuevaCalificacion = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
+        let nuevaCal = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
 
-        const filaReporte = [fecha, nEdificio, nSupervisor, nOperario, puntaje.toFixed(1), obs, hayEvidenciaFotografica];
+        const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia];
 
         try {
-            // 1. Guardar el reporte
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'Reportes', datos: filaReporte }) });
-            // 2. Actualizar las estrellas del empleado
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCalificacion, nuevosReportes: nuevosRep }) });
-            
-            alert(`¡Reporte subido exitosamente a la nube!\nCalificación de esta visita: ${puntaje.toFixed(1)} estrellas.`);
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
+            alert(`¡Reporte subido!\nCalificación: ${puntaje.toFixed(1)} estrellas.`);
             window.location.reload();
         } catch (error) {
             alert('Error al enviar. Revisa tu conexión a internet.');
             btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false;
         }
     }
-
-    // Iniciar
-    window.onload = cargarDatosNube;
-
 </script>
 </body>
 </html>
