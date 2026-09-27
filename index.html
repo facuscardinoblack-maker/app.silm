@@ -60,8 +60,8 @@
         .list-rating { background: #fffbeb; color: #d97706; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid #fde68a; }
 
         .bottom-tabs { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; z-index: 50; padding-bottom: env(safe-area-inset-bottom); height: 65px; }
-        .tab-btn { flex: 1; padding: 6px 0; text-align: center; font-size: 11px; font-weight: 600; color: #9ca3af; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-        .tab-btn i { font-size: 22px; font-style: normal; }
+        .tab-btn { flex: 1; padding: 4px 0; text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+        .tab-btn i { font-size: 18px; font-style: normal; }
         .tab-btn.active { color: var(--primary); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -71,7 +71,6 @@
         .btn-submit { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         .btn-danger { width: 100%; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         
-        /* PANTALLA DE ÉXITO Y COMPARTIR */
         #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; box-sizing: border-box; }
         #success-screen.active { display: flex; }
         .success-icon { width: 70px; height: 70px; background: #ecfdf5; color: var(--success); font-size: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
@@ -117,6 +116,7 @@
     </div>
     
     <div class="main-content">
+        <!-- VISTA: SUPERVISIÓN -->
         <div id="view-supervision" class="view active">
             <div id="step1" class="step active">
                 <div class="card">
@@ -148,16 +148,44 @@
             </div>
         </div>
 
+        <!-- VISTA: PERSONAL -->
         <div id="view-personal" class="view"><div class="list-container" id="list-personal"></div></div>
+        
+        <!-- VISTA: SUPERVISORES -->
         <div id="view-supervisores" class="view"><div class="list-container" id="list-supervisores"></div></div>
+        
+        <!-- VISTA: EDIFICIOS -->
         <div id="view-edificios" class="view"><div class="list-container" id="list-edificios"></div></div>
+
+        <!-- VISTA: REPORTES E HISTORIAL CON FILTROS -->
+        <div id="view-reportes" class="view">
+            <div style="padding: 15px 15px 0 15px;">
+                <div class="card" style="margin-bottom: 0;">
+                    <h3>Filtros de Búsqueda</h3>
+                    <div class="form-group">
+                        <label>Filtrar por Edificio</label>
+                        <select id="filtroEdificio" onchange="aplicarFiltrosReportes()">
+                            <option value="">Todos los edificios</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Filtrar por Fecha</label>
+                        <input type="date" id="filtroFecha" onchange="aplicarFiltrosReportes()">
+                    </div>
+                    <button class="btn-submit" style="background: #6b7280; padding: 10px; font-size: 14px;" onclick="limpiarFiltrosReportes()">Limpiar Filtros</button>
+                </div>
+            </div>
+            <div class="list-container" id="list-reportes"></div>
+        </div>
     </div>
 
+    <!-- TABS INFERIORES (5 Pestañas) -->
     <div class="bottom-tabs">
         <button class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
         <button class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
         <button id="tab-supervisores" class="tab-btn" onclick="switchTab('supervisores', this, 'Supervisores')"><i>👔</i><span>Supervisores</span></button>
         <button class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
+        <button class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
     </div>
 
     <!-- Modales -->
@@ -188,11 +216,11 @@
 <script>
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
-    let db = { personal: [], supervisores: [], edificios: [] };
+    let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
-    let ultimoReporteTexto = ""; // Para armar el mensaje de WhatsApp
+    let ultimoReporteTexto = "";
 
     window.onload = async () => {
         try {
@@ -201,6 +229,7 @@
             db.personal = data.personal || [];
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
+            db.reportes = data.reportes || [];
             datosListos = true;
         } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
@@ -254,15 +283,18 @@
         document.getElementById(`view-${viewId}`).classList.add('active');
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
-        document.getElementById('btnHeaderAdd').style.display = (usuarioActual.rango === 'jefe' && viewId !== 'supervision') ? 'block' : 'none';
+        document.getElementById('btnHeaderAdd').style.display = (usuarioActual.rango === 'jefe' && viewId !== 'supervision' && viewId !== 'reportes') ? 'block' : 'none';
     }
     
     function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
 
     function cargarListas() {
+        // Cargar selects de formularios y filtros
         document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
         document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
         document.getElementById('selOperario').innerHTML = '<option value="">Seleccione operario...</option>' + db.personal.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        
+        document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
 
         const renderList = (tipo, containerId) => {
             document.getElementById(containerId).innerHTML = db[tipo].map(item => `
@@ -272,7 +304,57 @@
                     ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
                 </div>`).join('');
         };
-        renderList('personal', 'list-personal'); renderList('supervisores', 'list-supervisores'); renderList('edificios', 'list-edificios');
+        renderList('personal', 'list-personal'); 
+        renderList('supervisores', 'list-supervisores'); 
+        renderList('edificios', 'list-edificios');
+        
+        renderizarReportes(db.reportes);
+    }
+
+    function renderizarReportes(listaReportes) {
+        const contenedor = document.getElementById('list-reportes');
+        if(!listaReportes || listaReportes.length === 0) {
+            contenedor.innerHTML = '<p style="text-align:center; color:#6b7280; padding:20px;">No hay reportes registrados.</p>';
+            return;
+        }
+
+        // Ordenar del más nuevo al más viejo (asumiendo que se van acumulando)
+        const invertidos = [...listaReportes].reverse();
+
+        contenedor.innerHTML = invertidos.map(r => `
+            <div class="card" style="margin-bottom: 10px; padding: 14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <strong style="color:var(--primary); font-size:15px;">🏢 ${r.edificio || 'Edificio'}</strong>
+                    <span style="background:#fffbeb; color:#d97706; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">⭐ ${r.puntaje || '5.0'}</span>
+                </div>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">📅 <strong>Fecha:</strong> ${r.fecha ? r.fecha.substring(0, 10) : 'N/A'}</p>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👔 <strong>Supervisor:</strong> ${r.supervisor || 'N/A'}</p>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👷 <strong>Operario:</strong> ${r.operario || 'N/A'}</p>
+                <p style="margin: 6px 0 0 0; font-size:13px; background:#f9fafb; padding:8px; border-radius:6px;">📝 <em>${r.observaciones || 'Sin observaciones'}</em></p>
+            </div>
+        `).join('');
+    }
+
+    function aplicarFiltrosReportes() {
+        const edificioFiltro = document.getElementById('filtroEdificio').value;
+        const fechaFiltro = document.getElementById('filtroFecha').value;
+
+        let filtrados = db.reportes.filter(r => {
+            let coincideEdificio = edificioFiltro === "" || r.edificio === edificioFiltro;
+            let coincideFecha = true;
+            if(fechaFiltro && r.fecha) {
+                coincideFecha = r.fecha.substring(0, 10) === fechaFiltro;
+            }
+            return coincideEdificio && coincideFecha;
+        });
+
+        renderizarReportes(filtrados);
+    }
+
+    function limpiarFiltrosReportes() {
+        document.getElementById('filtroEdificio').value = "";
+        document.getElementById('filtroFecha').value = "";
+        renderizarReportes(db.reportes);
     }
 
     function abrirModalAgregar() {
@@ -394,7 +476,6 @@
         document.querySelector('.main-content').scrollTop = 0;
     }
 
-    // --- FUNCIÓN DE GPS Y ENVÍO A LA NUBE ---
     function finalizarReporteConGPS() {
         const btnNext = document.getElementById('btnNext');
         btnNext.innerText = 'Obteniendo GPS...'; btnNext.disabled = true;
@@ -407,15 +488,10 @@
                     const gpsLink = `https://maps.google.com/?q=${lat},${lon}`;
                     enviarDatosFinales(gpsLink);
                 },
-                (error) => {
-                    // Si el usuario niega el GPS o falla, igual sube el reporte sin bloquearlo
-                    enviarDatosFinales("GPS No Disponible");
-                },
+                (error) => { enviarDatosFinales("GPS No Disponible"); },
                 { timeout: 10000 }
             );
-        } else {
-            enviarDatosFinales("GPS No Soportado");
-        }
+        } else { enviarDatosFinales("GPS No Soportado"); }
     }
 
     async function enviarDatosFinales(ubicacionGPS) {
@@ -423,7 +499,7 @@
         Object.values(reporteActual).forEach(val => {
             if(val.estado === 'C') { suma += 5; ptos++; }
             if(val.estado === 'D') { suma += 1; ptos++; }
-            if(val.fotoSacada) { hayEvidencia = "Sí"; }
+            if(val.fotoSacada) { hayEvidency = "Sí"; }
         });
         const puntaje = ptos > 0 ? (suma / ptos) : 5;
 
@@ -436,17 +512,14 @@
         let calActual = Number(operario.calificacion) || 5.0;
         let nuevaCal = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
 
-        // Fila para Google Sheets (Incluyendo la ubicación GPS al final)
         const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia, ubicacionGPS];
 
-        // Texto preparado para WhatsApp
         ultimoReporteTexto = `📋 *REPORTE DE SUPERVISIÓN SILM*%0A📅 Fecha: ${fecha}%0A🏢 Edificio: ${nEdificio}%0A👔 Supervisor: ${nSupervisor}%0A👷 Operario: ${operario.nombre}%0A⭐ Calificación: ${puntaje.toFixed(1)} / 5.0%0A📝 Obs: ${obs || 'Ninguna'}%0A📍 Ubicación GPS: ${ubicacionGPS}`;
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'Reportes', datos: filaReporte }) });
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
             
-            // Mostrar pantalla de éxito
             document.getElementById('successDetails').innerText = `Edificio: ${nEdificio} | Operario: ${operario.nombre} | Nota: ${puntaje.toFixed(1)} ⭐`;
             document.getElementById('success-screen').classList.add('active');
         } catch (error) {
