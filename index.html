@@ -106,7 +106,7 @@
         <p id="successDetails" style="color: #6b7280; margin-bottom: 25px;"></p>
         <button class="btn-submit" style="background: #25d366; margin-bottom: 10px;" onclick="enviarWhatsApp()">📲 Enviar Resumen por WhatsApp</button>
         <button class="btn-submit" style="background: #4b5563; margin-bottom: 10px;" onclick="window.print()">🖨️ Descargar / Imprimir PDF</button>
-        <button class="btn-submit" style="background: var(--primary);" onclick="window.location.reload()">🔄 Nuevo Reporte</button>
+        <button class="btn-submit" style="background: var(--primary);" onclick="reiniciarFormulario()">🔄 Nuevo Reporte</button>
     </div>
 
     <div class="header">
@@ -179,7 +179,7 @@
         </div>
     </div>
 
-    <!-- TABS INFERIORES (5 Pestañas) -->
+    <!-- TABS INFERIORES -->
     <div class="bottom-tabs">
         <button class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
         <button class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
@@ -289,7 +289,6 @@
     function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
 
     function cargarListas() {
-        // Cargar selects de formularios y filtros
         document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
         document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
         document.getElementById('selOperario').innerHTML = '<option value="">Seleccione operario...</option>' + db.personal.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
@@ -318,7 +317,6 @@
             return;
         }
 
-        // Ordenar del más nuevo al más viejo (asumiendo que se van acumulando)
         const invertidos = [...listaReportes].reverse();
 
         contenedor.innerHTML = invertidos.map(r => `
@@ -327,7 +325,7 @@
                     <strong style="color:var(--primary); font-size:15px;">🏢 ${r.edificio || 'Edificio'}</strong>
                     <span style="background:#fffbeb; color:#d97706; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">⭐ ${r.puntaje || '5.0'}</span>
                 </div>
-                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">📅 <strong>Fecha:</strong> ${r.fecha ? r.fecha.substring(0, 10) : 'N/A'}</p>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">📅 <strong>Fecha:</strong> ${r.fecha ? String(r.fecha).substring(0, 10) : 'N/A'}</p>
                 <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👔 <strong>Supervisor:</strong> ${r.supervisor || 'N/A'}</p>
                 <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👷 <strong>Operario:</strong> ${r.operario || 'N/A'}</p>
                 <p style="margin: 6px 0 0 0; font-size:13px; background:#f9fafb; padding:8px; border-radius:6px;">📝 <em>${r.observaciones || 'Sin observaciones'}</em></p>
@@ -343,7 +341,7 @@
             let coincideEdificio = edificioFiltro === "" || r.edificio === edificioFiltro;
             let coincideFecha = true;
             if(fechaFiltro && r.fecha) {
-                coincideFecha = r.fecha.substring(0, 10) === fechaFiltro;
+                coincideFecha = String(r.fecha).substring(0, 10) === fechaFiltro;
             }
             return coincideEdificio && coincideFecha;
         });
@@ -499,7 +497,7 @@
         Object.values(reporteActual).forEach(val => {
             if(val.estado === 'C') { suma += 5; ptos++; }
             if(val.estado === 'D') { suma += 1; ptos++; }
-            if(val.fotoSacada) { hayEvidency = "Sí"; }
+            if(val.fotoSacada) { hayEvidencia = "Sí"; }
         });
         const puntaje = ptos > 0 ? (suma / ptos) : 5;
 
@@ -526,6 +524,44 @@
             alert('Error al enviar. Revisa tu conexión a internet.');
             btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false;
         }
+    }
+
+    async function reiniciarFormulario() {
+        document.getElementById('success-screen').classList.remove('active');
+        
+        // Volver al paso 1 del formulario
+        document.getElementById(`step${pasoActual}`).classList.remove('active');
+        pasoActual = 1;
+        document.getElementById('step1').classList.add('active');
+        
+        // Limpiar observaciones y botones del checklist
+        document.getElementById('observacionesFinales').value = '';
+        const puntos = document.querySelectorAll('.checklist-item');
+        puntos.forEach((item, index) => {
+            document.getElementById(`btn-C-${index}`).className = 'status-btn';
+            document.getElementById(`btn-D-${index}`).className = 'status-btn';
+            const btnFoto = document.getElementById(`btn-foto-${index}`);
+            btnFoto.className = 'status-btn btn-camera';
+            btnFoto.innerHTML = '📸 Foto';
+            reporteActual[index] = { estado: null, fotoSacada: false };
+        });
+
+        // Restablecer botón siguiente
+        const btnNext = document.getElementById('btnNext');
+        btnNext.innerText = 'Siguiente';
+        btnNext.disabled = false;
+        btnNext.onclick = () => cambiarPaso(1);
+
+        // Sincronizar datos nuevos de la nube silenciosamente de fondo
+        try {
+            const respuesta = await fetch(APP_URL);
+            const data = await respuesta.json();
+            db.personal = data.personal || [];
+            db.supervisores = data.supervisores || [];
+            db.edificios = data.edificios || [];
+            db.reportes = data.reportes || [];
+            cargarListas();
+        } catch(e) {}
     }
 
     function enviarWhatsApp() {
