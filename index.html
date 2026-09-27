@@ -222,17 +222,22 @@
     let perfilActivo = { tipo: '', id: null };
     let ultimoReporteTexto = "";
 
+  // INICIAR DESCARGA FANTASMA APENAS SE ABRE LA WEB
     window.onload = async () => {
         try {
             const respuesta = await fetch(APP_URL);
             const data = await respuesta.json();
+            console.log("Datos recibidos de la nube:", data); // Para verificar en la consola del navegador
             db.personal = data.personal || [];
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
             datosListos = true;
-        } catch (error) { alert("Error de conexión. Recarga la página."); }
-    };
+        } catch (error) { 
+            console.error("Error al cargar:", error);
+            alert("Error de conexión. Recarga la página."); 
+        }
+    }; 
 
     function verificarRango() {
         const rango = document.getElementById('loginRango').value;
@@ -275,7 +280,7 @@
         }
     }
 
- let tabActual = 'supervision';
+let tabActual = 'supervision';
     async function switchTab(viewId, element, title) {
         tabActual = viewId;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -285,16 +290,13 @@
         document.getElementById('appTitle').innerText = title;
         document.getElementById('btnHeaderAdd').style.display = (usuarioActual.rango === 'jefe' && viewId !== 'supervision' && viewId !== 'reportes') ? 'block' : 'none';
 
-        // Si el usuario entra a la pestaña de Reportes, actualizamos y traemos los datos frescos de la nube
         if (viewId === 'reportes') {
             try {
                 const respuesta = await fetch(APP_URL);
                 const data = await respuesta.json();
                 db.reportes = data.reportes || [];
-                db.edificios = data.edificios || []; // Actualizamos edificios por si se agregó alguno
+                db.edificios = data.edificios || [];
                 renderizarReportes(db.reportes);
-                
-                // Actualizar selector de filtros de edificios
                 document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
             } catch (error) {
                 console.error("Error al actualizar reportes:", error);
