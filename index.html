@@ -90,10 +90,11 @@
                     <label>Rango de Acceso</label>
                     <select id="loginRango" required onchange="verificarRango()">
                         <option value="supervisor">Supervisor (Solo Reportes)</option>
+                        <option value="rrhh">Recursos Humanos (Personal y Edificios)</option>
                         <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
                     </select>
                 </div>
-                <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Clave de Jefe"></div>
+                <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Contraseña de acceso"></div>
                 <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
             </form>
         </div>
@@ -181,11 +182,11 @@
 
     <!-- TABS INFERIORES -->
     <div class="bottom-tabs">
-        <button class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
-        <button class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
+        <button id="tab-supervision" class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
+        <button id="tab-personal" class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
         <button id="tab-supervisores" class="tab-btn" onclick="switchTab('supervisores', this, 'Supervisores')"><i>👔</i><span>Supervisores</span></button>
-        <button class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
-        <button class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
+        <button id="tab-edificios" class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
+        <button id="tab-reportes" class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
     </div>
 
     <!-- Modales -->
@@ -222,26 +223,21 @@
     let perfilActivo = { tipo: '', id: null };
     let ultimoReporteTexto = "";
 
-  // INICIAR DESCARGA FANTASMA APENAS SE ABRE LA WEB
     window.onload = async () => {
         try {
             const respuesta = await fetch(APP_URL);
             const data = await respuesta.json();
-            console.log("Datos recibidos de la nube:", data); // Para verificar en la consola del navegador
             db.personal = data.personal || [];
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
             datosListos = true;
-        } catch (error) { 
-            console.error("Error al cargar:", error);
-            alert("Error de conexión. Recarga la página."); 
-        }
-    }; 
+        } catch (error) { alert("Error de conexión. Recarga la página."); }
+    };
 
     function verificarRango() {
         const rango = document.getElementById('loginRango').value;
-        document.getElementById('cajaPassword').style.display = (rango === 'jefe') ? 'block' : 'none';
+        document.getElementById('cajaPassword').style.display = (rango === 'jefe' || rango === 'rrhh') ? 'block' : 'none';
     }
 
     function iniciarApp(e) {
@@ -258,8 +254,11 @@
             const existeSupervisor = db.supervisores.find(s => s.nombre.toLowerCase() === nombreCompleto);
             if (!existeSupervisor) { alert("❌ ACCESO DENEGADO: No estás registrado como Supervisor."); return; }
             usuarioActual.nombre = existeSupervisor.nombre;
+        } else if (rango === 'rrhh') {
+            if (pass !== 'Rrhh2026') { alert("❌ ACCESO DENEGADO: Contraseña de RRHH incorrecta."); return; }
+            usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         } else if (rango === 'jefe') {
-            if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
+            if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña de Jefe incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         }
 
@@ -270,17 +269,24 @@
     function acceder() {
         document.getElementById('login-screen').classList.add('hidden');
         cargarListas();
+        
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
-            document.getElementById('btnHeaderAdd').style.display = 'none';
+            document.getElementById('tab-reportes').style.display = 'none';
             const selectSup = document.getElementById('selSupervisor');
             for(let i=0; i<selectSup.options.length; i++) {
                 if(selectSup.options[i].text === usuarioActual.nombre) { selectSup.selectedIndex = i; selectSup.disabled = true; break; }
             }
+        } else if (usuarioActual.rango === 'rrhh') {
+            // Ocultar Control y Reportes para RRHH
+            document.getElementById('tab-supervision').style.display = 'none';
+            document.getElementById('tab-reportes').style.display = 'none';
+            // Cambiar automáticamente a la pestaña Personal al ingresar
+            switchTab('personal', document.getElementById('tab-personal'), 'Personal');
         }
     }
 
-let tabActual = 'supervision';
+    let tabActual = 'supervision';
     async function switchTab(viewId, element, title) {
         tabActual = viewId;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -288,7 +294,13 @@ let tabActual = 'supervision';
         document.getElementById(`view-${viewId}`).classList.add('active');
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
-        document.getElementById('btnHeaderAdd').style.display = (usuarioActual.rango === 'jefe' && viewId !== 'supervision' && viewId !== 'reportes') ? 'block' : 'none';
+        
+        // Botón "+ Nuevo" visible para Jefe y RRHH en las pestañas permitidas
+        if ((usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') && viewId !== 'supervision' && viewId !== 'reportes') {
+            document.getElementById('btnHeaderAdd').style.display = 'block';
+        } else {
+            document.getElementById('btnHeaderAdd').style.display = 'none';
+        }
 
         if (viewId === 'reportes') {
             try {
@@ -298,9 +310,7 @@ let tabActual = 'supervision';
                 db.edificios = data.edificios || [];
                 renderizarReportes(db.reportes);
                 document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-            } catch (error) {
-                console.error("Error al actualizar reportes:", error);
-            }
+            } catch (error) {}
         }
     }
     
@@ -396,8 +406,8 @@ let tabActual = 'supervision';
         const desc = document.getElementById('addDesc').value;
         let hoja, datosFila;
 
-        if (tabActual === 'edificios') { hoja = 'Edificios'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc]; } 
-        else { hoja = tabActual === 'personal' ? 'Personal' : 'Supervisores'; datosFila = [id, nombre, 5.0, 0, desc]; }
+        if (tabActual === 'edificios') { hoja = 'EDIFICIOS'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc]; } 
+        else { hoja = tabActual === 'personal' ? 'PERSONAL' : 'SUPERVISORES'; datosFila = [id, nombre, 5.0, 0, desc]; }
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
@@ -414,7 +424,9 @@ let tabActual = 'supervision';
         document.getElementById('viewInitials').innerText = getIniciales(item.nombre); document.getElementById('viewTitle').innerText = item.nombre;
         document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
         document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
-        document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe') ? 'block' : 'none';
+        
+        // Jefe y RRHH pueden eliminar registros
+        document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') ? 'block' : 'none';
         document.getElementById('viewModal').classList.add('active');
     }
 
@@ -422,7 +434,7 @@ let tabActual = 'supervision';
         if(!confirm('¿Eliminar permanentemente este registro?')) return;
         const btn = document.getElementById('btnEliminarRegistro');
         btn.innerText = 'Eliminando...'; btn.disabled = true;
-        let nombreHoja = perfilActivo.tipo.charAt(0).toUpperCase() + perfilActivo.tipo.slice(1);
+        let nombreHoja = perfilActivo.tipo.toUpperCase();
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
             db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
@@ -533,8 +545,8 @@ let tabActual = 'supervision';
         ultimoReporteTexto = `📋 *REPORTE DE SUPERVISIÓN SILM*%0A📅 Fecha: ${fecha}%0A🏢 Edificio: ${nEdificio}%0A👔 Supervisor: ${nSupervisor}%0A👷 Operario: ${operario.nombre}%0A⭐ Calificación: ${puntaje.toFixed(1)} / 5.0%0A📝 Obs: ${obs || 'Ninguna'}%0A📍 Ubicación GPS: ${ubicacionGPS}`;
 
         try {
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'Reportes', datos: filaReporte }) });
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'Personal', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'REPORTES', datos: filaReporte }) });
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'PERSONAL', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
             
             document.getElementById('successDetails').innerText = `Edificio: ${nEdificio} | Operario: ${operario.nombre} | Nota: ${puntaje.toFixed(1)} ⭐`;
             document.getElementById('success-screen').classList.add('active');
@@ -547,12 +559,10 @@ let tabActual = 'supervision';
     async function reiniciarFormulario() {
         document.getElementById('success-screen').classList.remove('active');
         
-        // Volver al paso 1 del formulario
         document.getElementById(`step${pasoActual}`).classList.remove('active');
         pasoActual = 1;
         document.getElementById('step1').classList.add('active');
         
-        // Limpiar observaciones y botones del checklist
         document.getElementById('observacionesFinales').value = '';
         const puntos = document.querySelectorAll('.checklist-item');
         puntos.forEach((item, index) => {
@@ -564,13 +574,11 @@ let tabActual = 'supervision';
             reporteActual[index] = { estado: null, fotoSacada: false };
         });
 
-        // Restablecer botón siguiente
         const btnNext = document.getElementById('btnNext');
         btnNext.innerText = 'Siguiente';
         btnNext.disabled = false;
         btnNext.onclick = () => cambiarPaso(1);
 
-        // Sincronizar datos nuevos de la nube silenciosamente de fondo
         try {
             const respuesta = await fetch(APP_URL);
             const data = await respuesta.json();
