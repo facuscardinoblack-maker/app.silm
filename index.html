@@ -59,6 +59,19 @@
         .list-subtitle { font-size: 13px; color: #6b7280; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .list-rating { background: #fffbeb; color: #d97706; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid #fde68a; }
 
+        /* ESTILOS PARA LA TABLA DE ASISTENCIA (MATRIZ) */
+        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 10px; }
+        .attendance-table { border-collapse: collapse; width: max-content; white-space: nowrap; font-size: 14px; }
+        .attendance-table th, .attendance-table td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; }
+        .attendance-table th { background: #f8fafc; color: var(--primary); font-weight: 600; position: sticky; top: 0; z-index: 2; }
+        /* Primera columna fija (Nombre del empleado) */
+        .attendance-table th:first-child, .attendance-table td:first-child { position: sticky; left: 0; background: white; z-index: 3; text-align: left; font-weight: 600; min-width: 150px; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .attendance-table th:first-child { z-index: 4; background: #f8fafc; }
+        .attendance-cell { cursor: pointer; user-select: none; font-size: 16px; width: 35px; height: 35px; transition: background 0.2s; }
+        .attendance-cell:hover { background: #f1f5f9; }
+        .att-present { color: var(--success); font-weight: bold; background: #ecfdf5; }
+        .att-absent { color: var(--danger); font-weight: bold; background: #fef2f2; }
+
         .bottom-tabs { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; z-index: 50; padding-bottom: env(safe-area-inset-bottom); height: 65px; }
         .tab-btn { flex: 1; padding: 4px 0; text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .tab-btn i { font-size: 18px; font-style: normal; }
@@ -90,7 +103,7 @@
                     <label>Rango de Acceso</label>
                     <select id="loginRango" required onchange="verificarRango()">
                         <option value="supervisor">Supervisor (Solo Reportes)</option>
-                        <option value="rrhh">Recursos Humanos (Personal y Edificios)</option>
+                        <option value="rrhh">Recursos Humanos (Personal, Edificios y Asistencia)</option>
                         <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
                     </select>
                 </div>
@@ -158,6 +171,25 @@
         <!-- VISTA: EDIFICIOS -->
         <div id="view-edificios" class="view"><div class="list-container" id="list-edificios"></div></div>
 
+        <!-- VISTA: ASISTENCIA (CALENDARIO RRHH) -->
+        <div id="view-asistencia" class="view" style="padding: 15px;">
+            <div class="card" style="margin-bottom: 10px;">
+                <h3>Calendario de Asistencia</h3>
+                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda para alternar: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente</p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="margin:0;">Mes:</label>
+                    <select id="mesAsistencia" onchange="generarCalendarioAsistencia()" style="padding: 8px;">
+                        <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="attendance-table" id="tablaAsistencia">
+                    <!-- Se genera por JavaScript -->
+                </table>
+            </div>
+        </div>
+
         <!-- VISTA: REPORTES E HISTORIAL CON FILTROS -->
         <div id="view-reportes" class="view">
             <div style="padding: 15px 15px 0 15px;">
@@ -186,6 +218,7 @@
         <button id="tab-personal" class="tab-btn" onclick="switchTab('personal', this, 'Personal')"><i>👥</i><span>Personal</span></button>
         <button id="tab-supervisores" class="tab-btn" onclick="switchTab('supervisores', this, 'Supervisores')"><i>👔</i><span>Supervisores</span></button>
         <button id="tab-edificios" class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
+        <button id="tab-asistencia" class="tab-btn" onclick="switchTab('asistencia', this, 'Asistencia')"><i>📅</i><span>Asistencia</span></button>
         <button id="tab-reportes" class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
     </div>
 
@@ -218,6 +251,7 @@
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
     let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
+    let asistenciaData = {}; // Memoria local para la asistencia { "idOperario_dia": "C" o "D" }
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
@@ -232,6 +266,10 @@
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
             datosListos = true;
+
+            // Seleccionar mes actual por defecto en el selector
+            const mesActual = new Date().getMonth();
+            document.getElementById('mesAsistencia').value = mesActual;
         } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
 
@@ -272,6 +310,7 @@
         
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
+            document.getElementById('tab-asistencia').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
             const selectSup = document.getElementById('selSupervisor');
             for(let i=0; i<selectSup.options.length; i++) {
@@ -296,10 +335,14 @@
         document.getElementById('appTitle').innerText = title;
         
         // Botón "+ Nuevo" visible para Jefe y RRHH en las pestañas permitidas
-        if ((usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') && viewId !== 'supervision' && viewId !== 'reportes') {
+        if ((usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') && (viewId === 'personal' || viewId === 'supervisores' || viewId === 'edificios')) {
             document.getElementById('btnHeaderAdd').style.display = 'block';
         } else {
             document.getElementById('btnHeaderAdd').style.display = 'none';
+        }
+
+        if (viewId === 'asistencia') {
+            generarCalendarioAsistencia();
         }
 
         if (viewId === 'reportes') {
@@ -311,6 +354,67 @@
                 renderizarReportes(db.reportes);
                 document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
             } catch (error) {}
+        }
+    }
+
+    // --- GENERADOR DE LA MATRIZ DE ASISTENCIA ---
+    function generarCalendarioAsistencia() {
+        const mes = parseInt(document.getElementById('mesAsistencia').value);
+        const anio = new Date().getFullYear();
+        // Obtener cantidad de días del mes seleccionado
+        const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+        const tabla = document.getElementById('tablaAsistencia');
+        
+        // 1. Cabecera de días (1 al 31)
+        let htmlHead = '<tr><th>Personal / Día</th>';
+        for (let d = 1; d <= totalDias; d++) {
+            htmlHead += `<th>${d}</th>`;
+        }
+        htmlHead += '</tr>';
+
+        // 2. Filas por cada empleado en db.personal
+        let htmlBody = '';
+        if (db.personal.length === 0) {
+            tabla.innerHTML = '<tr><td style="padding:20px; text-align:center;">No hay personal registrado.</td></tr>';
+            return;
+        }
+
+        db.personal.forEach(emp => {
+            htmlBody += `<tr><td>${emp.nombre}</td>`;
+            for (let d = 1; d <= totalDias; d++) {
+                let key = `${emp.id}_${mes}_${d}`;
+                let estado = asistenciaData[key] || '';
+                let claseCSS = '';
+                let simbolo = '';
+                if (estado === 'C') { claseCSS = 'att-present'; simbolo = '✔️'; }
+                else if (estado === 'D') { claseCSS = 'att-absent'; simbolo = '❌'; }
+
+                htmlBody += `<td class="attendance-cell ${claseCSS}" onclick="marcarAsistencia(${emp.id}, ${mes}, ${d}, this)">${simbolo}</td>`;
+            }
+            htmlBody += '</tr>';
+        });
+
+        tabla.innerHTML = htmlHead + htmlBody;
+    }
+
+    function marcarAsistencia(empId, mes, dia, celda) {
+        let key = `${empId}_${mes}_${dia}`;
+        let actual = asistenciaData[key] || '';
+
+        // Ciclo: Vacío -> 'C' (✔️) -> 'D' (❌) -> Vacío
+        if (actual === '') {
+            asistenciaData[key] = 'C';
+            celda.className = 'attendance-cell att-present';
+            celda.innerText = '✔️';
+        } else if (actual === 'C') {
+            asistenciaData[key] = 'D';
+            celda.className = 'attendance-cell att-absent';
+            celda.innerText = '❌';
+        } else {
+            asistenciaData[key] = '';
+            celda.className = 'attendance-cell';
+            celda.innerText = '';
         }
     }
     
@@ -425,7 +529,6 @@
         document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
         document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
         
-        // Jefe y RRHH pueden eliminar registros
         document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') ? 'block' : 'none';
         document.getElementById('viewModal').classList.add('active');
     }
@@ -568,9 +671,9 @@
         puntos.forEach((item, index) => {
             document.getElementById(`btn-C-${index}`).className = 'status-btn';
             document.getElementById(`btn-D-${index}`).className = 'status-btn';
-            const btnFoto = document.getElementById(`btn-foto-${index}`);
-            btnFoto.className = 'status-btn btn-camera';
-            btnFoto.innerHTML = '📸 Foto';
+            const btnFooter = document.getElementById(`btn-foto-${index}`);
+            btnFooter.className = 'status-btn btn-camera';
+            btnFooter.innerHTML = '📸 Foto';
             reporteActual[index] = { estado: null, fotoSacada: false };
         });
 
