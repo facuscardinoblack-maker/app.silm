@@ -33,6 +33,10 @@
         input[type="text"], input[type="password"], input[type="date"], select, textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f9fafb; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background-color: white; }
         
+        /* BUSCADOR RÁPIDO */
+        .search-container { padding: 15px 15px 0 15px; }
+        .search-input { width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box; }
+
         .checklist-item { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
         .checklist-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .checklist-item h4 { margin: 0 0 10px 0; font-size: 15px; color: #111827; }
@@ -165,19 +169,28 @@
         </div>
 
         <!-- VISTA: PERSONAL -->
-        <div id="view-personal" class="view"><div class="list-container" id="list-personal"></div></div>
+        <div id="view-personal" class="view">
+            <div class="search-container"><input type="text" class="search-input" id="searchPersonal" placeholder="🔍 Buscar operario..." oninput="filtrarLista('personal')"></div>
+            <div class="list-container" id="list-personal"></div>
+        </div>
         
         <!-- VISTA: SUPERVISORES -->
-        <div id="view-supervisores" class="view"><div class="list-container" id="list-supervisores"></div></div>
+        <div id="view-supervisores" class="view">
+            <div class="search-container"><input type="text" class="search-input" id="searchSupervisores" placeholder="🔍 Buscar supervisor..." oninput="filtrarLista('supervisores')"></div>
+            <div class="list-container" id="list-supervisores"></div>
+        </div>
         
         <!-- VISTA: EDIFICIOS -->
-        <div id="view-edificios" class="view"><div class="list-container" id="list-edificios"></div></div>
+        <div id="view-edificios" class="view">
+            <div class="search-container"><input type="text" class="search-input" id="searchEdificios" placeholder="🔍 Buscar edificio..." oninput="filtrarLista('edificios')"></div>
+            <div class="list-container" id="list-edificios"></div>
+        </div>
 
         <!-- VISTA: ASISTENCIA (CALENDARIO RRHH) -->
         <div id="view-asistencia" class="view" style="padding: 15px;">
             <div class="card" style="margin-bottom: 10px;">
                 <h3>Calendario de Asistencia</h3>
-                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente (con nota)</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente (con nota). <em>Se guarda automáticamente en la nube.</em></p>
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
                     <label style="margin:0;">Mes:</label>
                     <select id="mesAsistencia" onchange="generarCalendarioAsistencia()" style="padding: 8px;">
@@ -257,8 +270,8 @@
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
     let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
-    let asistenciaData = {};
-    let asistenciaNotas = {};
+    let asistenciaData = {};   // { "idEmp_mes_dia": "C" o "D" }
+    let asistenciaNotas = {};  // { "idEmp_mes_dia": "Nota" }
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
@@ -274,6 +287,23 @@
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
+            
+            // Cargar asistencia desde la nube
+            if (data.asistencia) {
+                data.asistencia.forEach(row => {
+                    if (row.clave && row.data) {
+                        try {
+                            let obj = JSON.parse(row.data);
+                            for (let dia in obj) {
+                                let key = `${row.operario_id}_${row.mes}_${dia}`;
+                                asistenciaData[key] = obj[dia].e;
+                                if (obj[dia].n) asistenciaNotas[key] = obj[dia].n;
+                            }
+                        } catch(e) {}
+                    }
+                });
+            }
+
             datosListos = true;
             document.getElementById('mesAsistencia').value = new Date().getMonth();
         } catch (error) { alert("Error de conexión. Recarga la página."); }
@@ -361,169 +391,29 @@
         
         document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
 
-        const renderList = (tipo, containerId) => {
-            document.getElementById(containerId).innerHTML = db[tipo].map(item => `
-                <div class="list-item" onclick="verPerfil('${tipo}', ${item.id})">
-                    <div class="list-avatar">${getAvatarHTML(item.nombre, item.foto)}</div>
-                    <div class="list-info"><h4 class="list-title">${item.nombre}</h4><p class="list-subtitle">${item.direccion || item.descripcion || 'Sin descripción'}</p></div>
-                    ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
-                </div>`).join('');
-        };
-        renderList('personal', 'list-personal'); 
-        renderList('supervisores', 'list-supervisores'); 
-        renderList('edificios', 'list-edificios');
+        renderizarListaFiltrada('personal', db.personal, 'list-personal');
+        renderizarListaFiltrada('supervisores', db.supervisores, 'list-supervisores');
+        renderizarListaFiltrada('edificios', db.edificios, 'list-edificios');
         renderizarReportes(db.reportes);
     }
 
-    // --- MODAL AGREGAR / EDITAR ---
-    function abrirModalAgregar() {
-        modoEdicion = false;
-        fotoBase64Actual = "";
-        document.getElementById('modalAddTitle').innerText = `Nuevo ${tabActual === 'personal' ? 'Operario' : tabActual === 'supervisores' ? 'Supervisor' : 'Edificio'}`;
-        document.getElementById('addCampo1').value = ''; 
-        document.getElementById('addCampo2').value = ''; 
-        document.getElementById('addDesc').value = '';
-        document.getElementById('addFoto').value = '';
-
-        if(tabActual === 'edificios') {
-            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio'; 
-            document.getElementById('lblCampo2').innerText = 'Dirección';
-            document.getElementById('addCampo2').parentElement.style.display = 'block';
-        } else {
-            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
-            document.getElementById('addCampo2').parentElement.style.display = 'none';
-        }
-        document.getElementById('addModal').classList.add('active');
+    // --- BUSCADOR RÁPIDO ---
+    function filtrarLista(tipo) {
+        const query = document.getElementById(`search${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value.toLowerCase();
+        const filtrados = db[tipo].filter(item => item.nombre.toLowerCase().includes(query) || (item.direccion && item.direccion.toLowerCase().includes(query)));
+        renderizarListaFiltrada(tipo, filtrados, `list-${tipo}`);
     }
 
-    function abrirModalModificar() {
-        cerrarModal('viewModal');
-        modoEdicion = true;
-        const item = db[perfilActivo.tipo].find(x => x.id == perfilActivo.id);
-        fotoBase64Actual = item.foto || "";
-
-        document.getElementById('modalAddTitle').innerText = `Modificar ${perfilActivo.tipo === 'edificios' ? 'Edificio' : 'Registro'}`;
-        document.getElementById('addCampo1').value = item.nombre || '';
-        document.getElementById('addDesc').value = item.descripcion || '';
-        document.getElementById('addFoto').value = '';
-
-        if(perfilActivo.tipo === 'edificios') {
-            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio';
-            document.getElementById('lblCampo2').innerText = 'Dirección';
-            document.getElementById('addCampo2').value = item.direccion || '';
-            document.getElementById('addCampo2').parentElement.style.display = 'block';
-        } else {
-            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
-            document.getElementById('addCampo2').parentElement.style.display = 'none';
-        }
-        document.getElementById('addModal').classList.add('active');
+    function renderizarListaFiltrada(tipo, lista, containerId) {
+        document.getElementById(containerId).innerHTML = lista.map(item => `
+            <div class="list-item" onclick="verPerfil('${tipo}', ${item.id})">
+                <div class="list-avatar">${getAvatarHTML(item.nombre, item.foto)}</div>
+                <div class="list-info"><h4 class="list-title">${item.nombre}</h4><p class="list-subtitle">${item.direccion || item.descripcion || 'Sin descripción'}</p></div>
+                ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
+            </div>`).join('');
     }
 
-    async function guardarDato(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnGuardarAdd');
-        btn.innerText = 'Guardando...'; btn.disabled = true;
-
-        const nombre = document.getElementById('addCampo1').value;
-        const desc = document.getElementById('addDesc').value;
-        const fileInput = document.getElementById('addFoto');
-
-        let procesarGuardado = async (fotoFinal) => {
-            let hoja = tabActual.toUpperCase();
-            if (modoEdicion) hoja = perfilActivo.tipo.toUpperCase();
-
-            let datosFila, accionTipo;
-            if (hoja === 'EDIFICIOS') {
-                let dir = document.getElementById('addCampo2').value;
-                if (modoEdicion) {
-                    datosFila = [perfilActivo.id, nombre, dir, desc, fotoFinal];
-                    accionTipo = 'actualizar';
-                } else {
-                    datosFila = [Date.now(), nombre, dir, desc, fotoFinal];
-                    accionTipo = 'insertar';
-                }
-            } else {
-                if (modoEdicion) {
-                    let itemOld = db[perfilActivo.tipo].find(x => x.id == perfilActivo.id);
-                    datosFila = [perfilActivo.id, nombre, itemOld.calificacion || 5.0, itemOld.reportes || 0, desc, fotoFinal];
-                    accionTipo = 'actualizar';
-                } else {
-                    datosFila = [Date.now(), nombre, 5.0, 0, desc, fotoFinal];
-                    accionTipo = 'insertar';
-                }
-            }
-
-            try {
-                await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: accionTipo, hoja: hoja, id: modoEdicion ? perfilActivo.id : null, datos: datosFila }) });
-                const resp = await fetch(APP_URL); 
-                const data = await resp.json();
-                db.personal = data.personal || [];
-                db.supervisores = data.supervisores || [];
-                db.edificios = data.edificios || [];
-                cargarListas();
-                cerrarModal('addModal');
-            } catch (error) { alert('Error al guardar.'); } 
-            finally { btn.innerText = 'Guardar'; btn.disabled = false; }
-        };
-
-        if (fileInput.files && fileInput.files[0]) {
-            comprimirImagen(fileInput.files[0], (base64) => { procesarGuardado(base64); });
-        } else {
-            procesarGuardado(fotoBase64Actual);
-        }
-    }
-
-    function comprimirImagen(file, callback) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const img = new Image();
-            img.onload = function () {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                let width = img.width; let height = img.height;
-                const maxSize = 120;
-                if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
-                else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
-                canvas.width = width; canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                callback(canvas.toDataURL('image/jpeg', 0.7));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function verPerfil(tipo, id) {
-        perfilActivo = { tipo: tipo, id: id };
-        const item = db[tipo].find(x => x.id == id);
-        
-        document.getElementById('viewInitials').innerHTML = getAvatarHTML(item.nombre, item.foto); 
-        document.getElementById('viewTitle').innerText = item.nombre;
-        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes || 0}`;
-        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
-        
-        const esPermitido = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh');
-        document.getElementById('btnModificarRegistro').style.display = esPermitido ? 'block' : 'none';
-        document.getElementById('btnEliminarRegistro').style.display = esPermitido ? 'block' : 'none';
-        document.getElementById('viewModal').classList.add('active');
-    }
-
-    async function ejecutarEliminar() {
-        if(!confirm('¿Estás seguro de eliminar permanentemente este registro?')) return;
-        const btn = document.getElementById('btnEliminarRegistro');
-        btn.innerText = 'Eliminando...'; btn.disabled = true;
-        let nombreHoja = perfilActivo.tipo.toUpperCase();
-        try {
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
-            db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
-            cargarListas(); cerrarModal('viewModal');
-        } catch(error) { alert('Error al eliminar.'); } 
-        finally { btn.innerText = 'Eliminar Registro'; btn.disabled = false; }
-    }
-
-    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    // --- ASISTENCIA & REPORTES (MANTENIDO) ---
+    // --- CALENDARIO DE ASISTENCIA SINCRONIZADO A LA NUBE ---
     function generarCalendarioAsistencia() {
         const mes = parseInt(document.getElementById('mesAsistencia').value);
         const anio = new Date().getFullYear();
@@ -560,7 +450,7 @@
         tabla.innerHTML = htmlHead + htmlBody;
     }
 
-    function marcarAsistencia(empId, mes, dia, celda) {
+    async function marcarAsistencia(empId, mes, dia, celda) {
         let key = `${empId}_${mes}_${dia}`;
         let actual = asistenciaData[key] || '';
         if (actual === '') {
@@ -579,6 +469,34 @@
             asistenciaData[key] = ''; delete asistenciaNotas[key];
             celda.className = 'attendance-cell'; celda.innerText = ''; celda.title = '';
         }
+
+        // Guardar automáticamente en Google Sheets en segundo plano
+        await sincronizarAsistenciaNube(empId, mes);
+    }
+
+    async function sincronizarAsistenciaNube(empId, mes) {
+        const anio = new Date().getFullYear();
+        const clave = `${empId}_${mes}_${anio}`;
+        let mesData = {};
+        for (let d = 1; d <= 31; d++) {
+            let k = `${empId}_${mes}_${d}`;
+            if (asistenciaData[k]) {
+                mesData[d] = { e: asistenciaData[k], n: asistenciaNotas[k] || '' };
+            }
+        }
+        try {
+            await fetch(APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    accion: 'guardarAsistencia',
+                    hoja: 'ASISTENCIA',
+                    clave: clave,
+                    operarioId: empId,
+                    mes: mes,
+                    jsonValues: JSON.stringify(mesData)
+                })
+            });
+        } catch(err) { console.error("Error sincronizando asistencia:", err); }
     }
 
     function compartirAsistenciaWhatsApp() {
@@ -608,7 +526,124 @@
         window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     }
 
-    // CHECKLIST & REPORTES
+    // --- MODALES Y ACCIONES RESTANTES ---
+    function abrirModalAgregar() {
+        modoEdicion = false; fotoBase64Actual = "";
+        document.getElementById('modalAddTitle').innerText = `Nuevo ${tabActual === 'personal' ? 'Operario' : tabActual === 'supervisores' ? 'Supervisor' : 'Edificio'}`;
+        document.getElementById('addCampo1').value = ''; document.getElementById('addCampo2').value = ''; document.getElementById('addDesc').value = ''; document.getElementById('addFoto').value = '';
+        if(tabActual === 'edificios') {
+            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio'; document.getElementById('lblCampo2').innerText = 'Dirección';
+            document.getElementById('addCampo2').parentElement.style.display = 'block';
+        } else {
+            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
+            document.getElementById('addCampo2').parentElement.style.display = 'none';
+        }
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    function abrirModalModificar() {
+        cerrarModal('viewModal'); modoEdicion = true;
+        const item = db[perfilActivo.tipo].find(x => x.id == perfilActivo.id);
+        fotoBase64Actual = item.foto || "";
+        document.getElementById('modalAddTitle').innerText = `Modificar ${perfilActivo.tipo === 'edificios' ? 'Edificio' : 'Registro'}`;
+        document.getElementById('addCampo1').value = item.nombre || '';
+        document.getElementById('addDesc').value = item.descripcion || '';
+        document.getElementById('addFoto').value = '';
+        if(perfilActivo.tipo === 'edificios') {
+            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio'; document.getElementById('lblCampo2').innerText = 'Dirección';
+            document.getElementById('addCampo2').value = item.direccion || '';
+            document.getElementById('addCampo2').parentElement.style.display = 'block';
+        } else {
+            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
+            document.getElementById('addCampo2').parentElement.style.display = 'none';
+        }
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    async function guardarDato(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarAdd');
+        btn.innerText = 'Guardando...'; btn.disabled = true;
+        const nombre = document.getElementById('addCampo1').value;
+        const desc = document.getElementById('addDesc').value;
+        const fileInput = document.getElementById('addFoto');
+
+        let procesarGuardado = async (fotoFinal) => {
+            let hoja = tabActual.toUpperCase();
+            if (modoEdicion) hoja = perfilActivo.tipo.toUpperCase();
+            let datosFila, accionTipo;
+            if (hoja === 'EDIFICIOS') {
+                let dir = document.getElementById('addCampo2').value;
+                datosFila = [modoEdicion ? perfilActivo.id : Date.now(), nombre, dir, desc, fotoFinal];
+                accionTipo = modoEdicion ? 'actualizar' : 'insertar';
+            } else {
+                let itemOld = modoEdicion ? db[perfilActivo.tipo].find(x => x.id == perfilActivo.id) : {};
+                datosFila = [modoEdicion ? perfilActivo.id : Date.now(), nombre, itemOld.calificacion || 5.0, itemOld.reportes || 0, desc, fotoFinal];
+                accionTipo = modoEdicion ? 'actualizar' : 'insertar';
+            }
+            try {
+                await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: accionTipo, hoja: hoja, id: modoEdicion ? perfilActivo.id : null, datos: datosFila }) });
+                const resp = await fetch(APP_URL); const data = await resp.json();
+                db.personal = data.personal || []; db.supervisores = data.supervisores || []; db.edificios = data.edificios || [];
+                cargarListas(); cerrarModal('addModal');
+            } catch (error) { alert('Error al guardar.'); } 
+            finally { btn.innerText = 'Guardar'; btn.disabled = false; }
+        };
+
+        if (fileInput.files && fileInput.files[0]) {
+            comprimirImagen(fileInput.files[0], (base64) => { procesarGuardado(base64); });
+        } else { procesarGuardado(fotoBase64Actual); }
+    }
+
+    function comprimirImagen(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                let width = img.width; let height = img.height;
+                const maxSize = 120;
+                if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+                else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function verPerfil(tipo, id) {
+        perfilActivo = { tipo: tipo, id: id };
+        const item = db[tipo].find(x => x.id == id);
+        document.getElementById('viewInitials').innerHTML = getAvatarHTML(item.nombre, item.foto); 
+        document.getElementById('viewTitle').innerText = item.nombre;
+        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes || 0}`;
+        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
+        const esPermitido = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh');
+        document.getElementById('btnModificarRegistro').style.display = esPermitido ? 'block' : 'none';
+        document.getElementById('btnEliminarRegistro').style.display = esPermitido ? 'block' : 'none';
+        document.getElementById('viewModal').classList.add('active');
+    }
+
+    async function ejecutarEliminar() {
+        if(!confirm('¿Eliminar permanentemente este registro?')) return;
+        const btn = document.getElementById('btnEliminarRegistro');
+        btn.innerText = 'Eliminando...'; btn.disabled = true;
+        let nombreHoja = perfilActivo.tipo.toUpperCase();
+        try {
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
+            db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
+            cargarListas(); cerrarModal('viewModal');
+        } catch(error) { alert('Error al eliminar.'); } 
+        finally { btn.innerText = 'Eliminar Registro'; btn.disabled = false; }
+    }
+
+    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // CHECKLIST Y SUPERVISIONES (MANTENIDO)
     document.getElementById('fechaVisita').valueAsDate = new Date();
     const puntos = ["1. Basura", "2. Veredas y yuyos", "3. Hall de entrada", "4. Vidrios y espejos", "5. Palieres y pisos", "6. Ascensores y rieles", "7. Escaleras", "8. Cuarto limpieza"];
     let reporteActual = {}; 
@@ -619,7 +654,7 @@
             <div class="checklist-item">
                 <h4>${punto}</h4>
                 <div class="status-options">
-                    <div class="status-btn" id="btn-C-${index}" onclick="setEstado(${index}, 'C')">✔️ Bien</div>
+                    <div class="status-btn" id="btn-C-${index}" onclick="setEstado(${index}, 'C')">✔️️ Bien</div>
                     <div class="status-btn" id="btn-D-${index}" onclick="setEstado(${index}, 'D')">❌ Mal</div>
                     <div class="status-btn btn-camera" id="btn-foto-${index}" onclick="abrirCamara(${index})">📸 Foto</div>
                 </div>
@@ -627,7 +662,6 @@
             </div>
         `;
     });
-
     function setEstado(index, estado) {
         document.getElementById(`btn-C-${index}`).classList.remove('selected-C');
         document.getElementById(`btn-D-${index}`).classList.remove('selected-D');
@@ -642,7 +676,6 @@
             reporteActual[index].fotoSacada = true; 
         }
     }
-
     let pasoActual = 1;
     function cambiarPaso(direccion) {
         if(pasoActual === 1 && direccion === 1) {
@@ -662,7 +695,6 @@
         }
         document.querySelector('.main-content').scrollTop = 0;
     }
-
     function finalizarReporteConGPS() {
         const btnNext = document.getElementById('btnNext');
         btnNext.innerText = 'Obteniendo GPS...'; btnNext.disabled = true;
@@ -674,7 +706,6 @@
             );
         } else { enviarDatosFinales("GPS No Soportado"); }
     }
-
     async function enviarDatosFinales(ubicacionGPS) {
         let ptos = 0; let suma = 0; let hayEvidencia = "No";
         Object.values(reporteActual).forEach(val => {
@@ -687,13 +718,11 @@
         const idSup = document.getElementById('selSupervisor').value; const nSupervisor = db.supervisores.find(s => s.id == idSup).nombre;
         const idOp = document.getElementById('selOperario').value; const operario = db.personal.find(p => p.id == idOp);
         const fecha = document.getElementById('fechaVisita').value; const obs = document.getElementById('observacionesFinales').value;
-
         let nuevosRep = (Number(operario.reportes) || 0) + 1;
         let calActual = Number(operario.calificacion) || 5.0;
         let nuevaCal = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
         const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia, ubicacionGPS];
         ultimoReporteTexto = `📋 *REPORTE DE SUPERVISIÓN SILM*%0A📅 Fecha: ${fecha}%0A🏢 Edificio: ${nEdificio}%0A👔 Supervisor: ${nSupervisor}%0A👷 Operario: ${operario.nombre}%0A⭐ Calificación: ${puntaje.toFixed(1)} / 5.0%0A📝 Obs: ${obs || 'Ninguna'}%0A📍 Ubicación GPS: ${ubicacionGPS}`;
-
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'REPORTES', datos: filaReporte }) });
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'PERSONAL', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
@@ -701,7 +730,6 @@
             document.getElementById('success-screen').classList.add('active');
         } catch (error) { alert('Error al enviar.'); btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false; }
     }
-
     function renderizarReportes(listaReportes) {
         const contenedor = document.getElementById('list-reportes');
         if(!listaReportes || listaReportes.length === 0) {
@@ -721,7 +749,6 @@
             </div>
         `).join('');
     }
-
     function aplicarFiltrosReportes() {
         const edificioFiltro = document.getElementById('filtroEdificio').value;
         const fechaFiltro = document.getElementById('filtroFecha').value;
@@ -737,7 +764,6 @@
         document.getElementById('filtroFecha').value = "";
         renderizarReportes(db.reportes);
     }
-
     async function reiniciarFormulario() {
         document.getElementById('success-screen').classList.remove('active');
         document.getElementById(`step${pasoActual}`).classList.remove('active');
