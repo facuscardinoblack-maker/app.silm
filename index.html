@@ -30,7 +30,7 @@
         
         .form-group { margin-bottom: 16px; }
         label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #4b5563; }
-        input[type="text"], input[type="password"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f9fafb; }
+        input[type="text"], input[type="password"], input[type="date"], select, textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f9fafb; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background-color: white; }
         
         .checklist-item { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
@@ -53,7 +53,8 @@
 
         .list-container { padding: 15px; display: grid; gap: 12px; }
         .list-item { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 15px; cursor: pointer; }
-        .list-avatar { width: 48px; height: 48px; background: var(--primary); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; flex-shrink: 0; }
+        .list-avatar { width: 48px; height: 48px; background: var(--primary); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; flex-shrink: 0; overflow: hidden; }
+        .list-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .list-info { flex: 1; overflow: hidden; }
         .list-title { font-weight: 600; font-size: 16px; color: #111827; margin: 0 0 4px 0; }
         .list-subtitle { font-size: 13px; color: #6b7280; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -83,6 +84,7 @@
         .close-modal { position: absolute; top: 12px; right: 12px; background: #f3f4f6; border: none; font-size: 20px; font-weight: bold; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .btn-submit { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         .btn-danger { width: 100%; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+        .btn-warning { width: 100%; background: #d97706; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         
         #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; box-sizing: border-box; }
         #success-screen.active { display: flex; }
@@ -182,16 +184,13 @@
                         <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
                     </select>
                 </div>
-                <!-- BOTONES DE COMPARTIR E IMPRIMIR -->
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-submit" style="background: #25d366; margin-top:0; padding:10px; font-size:14px;" onclick="compartirAsistenciaWhatsApp()">📲 WhatsApp</button>
                     <button class="btn-submit" style="background: #4b5563; margin-top:0; padding:10px; font-size:14px;" onclick="window.print()">🖨️ Imprimir / PDF</button>
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="attendance-table" id="tablaAsistencia">
-                    <!-- Se genera por JavaScript -->
-                </table>
+                <table class="attendance-table" id="tablaAsistencia"></table>
             </div>
         </div>
 
@@ -227,15 +226,16 @@
         <button id="tab-reportes" class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
     </div>
 
-    <!-- Modales -->
+    <!-- Modales de Agregar / Modificar -->
     <div class="modal-overlay" id="addModal">
         <div class="modal-content">
             <button class="close-modal" onclick="cerrarModal('addModal')">×</button>
             <h2 id="modalAddTitle" style="margin-top:0;">Agregar</h2>
-            <form id="formAdd" onsubmit="guardarNuevoDato(event)">
+            <form id="formAdd" onsubmit="guardarDato(event)">
                 <div class="form-group"><label id="lblCampo1">Nombre</label><input type="text" id="addCampo1" required></div>
                 <div class="form-group"><label id="lblCampo2">Detalle</label><input type="text" id="addCampo2"></div>
-                <div class="form-group"><label>Descripción / Notas</label><textarea id="addDesc" rows="3"></textarea></div>
+                <div class="form-group"><label>Descripción / Notas</label><textarea id="addDesc" rows="2"></textarea></div>
+                <div class="form-group"><label>Foto de Perfil</label><input type="file" id="addFoto" accept="image/*"></div>
                 <button type="submit" class="btn-submit" id="btnGuardarAdd">Guardar</button>
             </form>
         </div>
@@ -244,10 +244,11 @@
     <div class="modal-overlay" id="viewModal">
         <div class="modal-content" style="text-align: center;">
             <button class="close-modal" onclick="cerrarModal('viewModal')">×</button>
-            <div class="list-avatar" id="viewInitials" style="width:70px; height:70px; font-size:28px; margin: 0 auto 15px auto;"></div>
+            <div class="list-avatar" id="viewInitials" style="width:70px; height:70px; font-size:28px; margin: 0 auto 15px auto; overflow:hidden;"></div>
             <h2 id="viewTitle" style="margin:0 0 5px 0;">Nombre</h2>
             <p id="viewSubtitle" style="color:#6b7280; margin:0 0 15px 0; font-size:14px;"></p>
-            <div id="viewExtra" style="background:#f9fafb; padding:15px; border-radius:8px; text-align:left; font-size:14px; line-height:1.5;"></div>
+            <div id="viewExtra" style="background:#f9fafb; padding:15px; border-radius:8px; text-align:left; font-size:14px; line-height:1.5; margin-bottom:15px;"></div>
+            <button id="btnModificarRegistro" class="btn-warning" style="display:none; margin-bottom:8px;" onclick="abrirModalModificar()">Modificar Registro</button>
             <button id="btnEliminarRegistro" class="btn-danger" style="display:none;" onclick="ejecutarEliminar()">Eliminar Registro</button>
         </div>
     </div>
@@ -256,11 +257,13 @@
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
     let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
-    let asistenciaData = {};   // { "idEmp_mes_dia": "C" o "D" }
-    let asistenciaNotas = {};  // { "idEmp_mes_dia": "Motivo..." }
+    let asistenciaData = {};
+    let asistenciaNotas = {};
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
+    let modoEdicion = false;
+    let fotoBase64Actual = "";
     let ultimoReporteTexto = "";
 
     window.onload = async () => {
@@ -272,9 +275,7 @@
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
             datosListos = true;
-
-            const mesActual = new Date().getMonth();
-            document.getElementById('mesAsistencia').value = mesActual;
+            document.getElementById('mesAsistencia').value = new Date().getMonth();
         } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
 
@@ -298,10 +299,10 @@
             if (!existeSupervisor) { alert("❌ ACCESO DENEGADO: No estás registrado como Supervisor."); return; }
             usuarioActual.nombre = existeSupervisor.nombre;
         } else if (rango === 'rrhh') {
-            if (pass !== 'Rrhh2026') { alert("❌ ACCESO DENEGADO: Contraseña de RRHH incorrecta."); return; }
+            if (pass !== 'Rrhh2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         } else if (rango === 'jefe') {
-            if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña de Jefe incorrecta."); return; }
+            if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         }
 
@@ -343,23 +344,186 @@
             document.getElementById('btnHeaderAdd').style.display = 'none';
         }
 
-        if (viewId === 'asistencia') {
-            generarCalendarioAsistencia();
-        }
+        if (viewId === 'asistencia') generarCalendarioAsistencia();
+    }
 
-        if (viewId === 'reportes') {
+    function getAvatarHTML(nombre, foto) {
+        if (foto && foto.startsWith('data:image')) {
+            return `<img src="${foto}" alt="Foto">`;
+        }
+        return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX';
+    }
+
+    function cargarListas() {
+        document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+        document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+        document.getElementById('selOperario').innerHTML = '<option value="">Seleccione operario...</option>' + db.personal.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        
+        document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+
+        const renderList = (tipo, containerId) => {
+            document.getElementById(containerId).innerHTML = db[tipo].map(item => `
+                <div class="list-item" onclick="verPerfil('${tipo}', ${item.id})">
+                    <div class="list-avatar">${getAvatarHTML(item.nombre, item.foto)}</div>
+                    <div class="list-info"><h4 class="list-title">${item.nombre}</h4><p class="list-subtitle">${item.direccion || item.descripcion || 'Sin descripción'}</p></div>
+                    ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
+                </div>`).join('');
+        };
+        renderList('personal', 'list-personal'); 
+        renderList('supervisores', 'list-supervisores'); 
+        renderList('edificios', 'list-edificios');
+        renderizarReportes(db.reportes);
+    }
+
+    // --- MODAL AGREGAR / EDITAR ---
+    function abrirModalAgregar() {
+        modoEdicion = false;
+        fotoBase64Actual = "";
+        document.getElementById('modalAddTitle').innerText = `Nuevo ${tabActual === 'personal' ? 'Operario' : tabActual === 'supervisores' ? 'Supervisor' : 'Edificio'}`;
+        document.getElementById('addCampo1').value = ''; 
+        document.getElementById('addCampo2').value = ''; 
+        document.getElementById('addDesc').value = '';
+        document.getElementById('addFoto').value = '';
+
+        if(tabActual === 'edificios') {
+            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio'; 
+            document.getElementById('lblCampo2').innerText = 'Dirección';
+            document.getElementById('addCampo2').parentElement.style.display = 'block';
+        } else {
+            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
+            document.getElementById('addCampo2').parentElement.style.display = 'none';
+        }
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    function abrirModalModificar() {
+        cerrarModal('viewModal');
+        modoEdicion = true;
+        const item = db[perfilActivo.tipo].find(x => x.id == perfilActivo.id);
+        fotoBase64Actual = item.foto || "";
+
+        document.getElementById('modalAddTitle').innerText = `Modificar ${perfilActivo.tipo === 'edificios' ? 'Edificio' : 'Registro'}`;
+        document.getElementById('addCampo1').value = item.nombre || '';
+        document.getElementById('addDesc').value = item.descripcion || '';
+        document.getElementById('addFoto').value = '';
+
+        if(perfilActivo.tipo === 'edificios') {
+            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio';
+            document.getElementById('lblCampo2').innerText = 'Dirección';
+            document.getElementById('addCampo2').value = item.direccion || '';
+            document.getElementById('addCampo2').parentElement.style.display = 'block';
+        } else {
+            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
+            document.getElementById('addCampo2').parentElement.style.display = 'none';
+        }
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    async function guardarDato(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarAdd');
+        btn.innerText = 'Guardando...'; btn.disabled = true;
+
+        const nombre = document.getElementById('addCampo1').value;
+        const desc = document.getElementById('addDesc').value;
+        const fileInput = document.getElementById('addFoto');
+
+        let procesarGuardado = async (fotoFinal) => {
+            let hoja = tabActual.toUpperCase();
+            if (modoEdicion) hoja = perfilActivo.tipo.toUpperCase();
+
+            let datosFila, accionTipo;
+            if (hoja === 'EDIFICIOS') {
+                let dir = document.getElementById('addCampo2').value;
+                if (modoEdicion) {
+                    datosFila = [perfilActivo.id, nombre, dir, desc, fotoFinal];
+                    accionTipo = 'actualizar';
+                } else {
+                    datosFila = [Date.now(), nombre, dir, desc, fotoFinal];
+                    accionTipo = 'insertar';
+                }
+            } else {
+                if (modoEdicion) {
+                    let itemOld = db[perfilActivo.tipo].find(x => x.id == perfilActivo.id);
+                    datosFila = [perfilActivo.id, nombre, itemOld.calificacion || 5.0, itemOld.reportes || 0, desc, fotoFinal];
+                    accionTipo = 'actualizar';
+                } else {
+                    datosFila = [Date.now(), nombre, 5.0, 0, desc, fotoFinal];
+                    accionTipo = 'insertar';
+                }
+            }
+
             try {
-                const respuesta = await fetch(APP_URL);
-                const data = await respuesta.json();
-                db.reportes = data.reportes || [];
+                await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: accionTipo, hoja: hoja, id: modoEdicion ? perfilActivo.id : null, datos: datosFila }) });
+                const resp = await fetch(APP_URL); 
+                const data = await resp.json();
+                db.personal = data.personal || [];
+                db.supervisores = data.supervisores || [];
                 db.edificios = data.edificios || [];
-                renderizarReportes(db.reportes);
-                document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-            } catch (error) {}
+                cargarListas();
+                cerrarModal('addModal');
+            } catch (error) { alert('Error al guardar.'); } 
+            finally { btn.innerText = 'Guardar'; btn.disabled = false; }
+        };
+
+        if (fileInput.files && fileInput.files[0]) {
+            comprimirImagen(fileInput.files[0], (base64) => { procesarGuardado(base64); });
+        } else {
+            procesarGuardado(fotoBase64Actual);
         }
     }
 
-    // --- GENERADOR DE LA MATRIZ DE ASISTENCIA ---
+    function comprimirImagen(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                let width = img.width; let height = img.height;
+                const maxSize = 120;
+                if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+                else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function verPerfil(tipo, id) {
+        perfilActivo = { tipo: tipo, id: id };
+        const item = db[tipo].find(x => x.id == id);
+        
+        document.getElementById('viewInitials').innerHTML = getAvatarHTML(item.nombre, item.foto); 
+        document.getElementById('viewTitle').innerText = item.nombre;
+        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes || 0}`;
+        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
+        
+        const esPermitido = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh');
+        document.getElementById('btnModificarRegistro').style.display = esPermitido ? 'block' : 'none';
+        document.getElementById('btnEliminarRegistro').style.display = esPermitido ? 'block' : 'none';
+        document.getElementById('viewModal').classList.add('active');
+    }
+
+    async function ejecutarEliminar() {
+        if(!confirm('¿Estás seguro de eliminar permanentemente este registro?')) return;
+        const btn = document.getElementById('btnEliminarRegistro');
+        btn.innerText = 'Eliminando...'; btn.disabled = true;
+        let nombreHoja = perfilActivo.tipo.toUpperCase();
+        try {
+            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
+            db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
+            cargarListas(); cerrarModal('viewModal');
+        } catch(error) { alert('Error al eliminar.'); } 
+        finally { btn.innerText = 'Eliminar Registro'; btn.disabled = false; }
+    }
+
+    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // --- ASISTENCIA & REPORTES (MANTENIDO) ---
     function generarCalendarioAsistencia() {
         const mes = parseInt(document.getElementById('mesAsistencia').value);
         const anio = new Date().getFullYear();
@@ -367,9 +531,7 @@
         const tabla = document.getElementById('tablaAsistencia');
         
         let htmlHead = '<tr><th>Personal / Día</th>';
-        for (let d = 1; d <= totalDias; d++) {
-            htmlHead += `<th>${d}</th>`;
-        }
+        for (let d = 1; d <= totalDias; d++) htmlHead += `<th>${d}</th>`;
         htmlHead += '</tr>';
 
         let htmlBody = '';
@@ -384,38 +546,26 @@
                 let key = `${emp.id}_${mes}_${d}`;
                 let estado = asistenciaData[key] || '';
                 let nota = asistenciaNotas[key] || '';
-                let claseCSS = '';
-                let simbolo = '';
+                let claseCSS = ''; let simbolo = '';
                 let tooltipAttr = nota ? `title="Nota: ${nota}"` : '';
                 let indicadorNota = nota ? '<span class="absence-note-dot"></span>' : '';
 
-                if (estado === 'C') { 
-                    claseCSS = 'att-present'; 
-                    simbolo = '✔️'; 
-                } else if (estado === 'D') { 
-                    claseCSS = 'att-absent'; 
-                    simbolo = '❌' + indicadorNota; 
-                }
+                if (estado === 'C') { claseCSS = 'att-present'; simbolo = '✔️'; }
+                else if (estado === 'D') { claseCSS = 'att-absent'; simbolo = '❌' + indicadorNota; }
 
                 htmlBody += `<td class="attendance-cell ${claseCSS}" ${tooltipAttr} onclick="marcarAsistencia(${emp.id}, ${mes}, ${d}, this)">${simbolo}</td>`;
             }
             htmlBody += '</tr>';
         });
-
         tabla.innerHTML = htmlHead + htmlBody;
     }
 
     function marcarAsistencia(empId, mes, dia, celda) {
         let key = `${empId}_${mes}_${dia}`;
         let actual = asistenciaData[key] || '';
-
-        // Ciclo: Vacío -> 'C' (Presente) -> 'D' (Ausente con nota opcional) -> Vacío
         if (actual === '') {
-            asistenciaData[key] = 'C';
-            delete asistenciaNotas[key];
-            celda.className = 'attendance-cell att-present';
-            celda.innerText = '✔️';
-            celda.title = '';
+            asistenciaData[key] = 'C'; delete asistenciaNotas[key];
+            celda.className = 'attendance-cell att-present'; celda.innerText = '✔️'; celda.title = '';
         } else if (actual === 'C') {
             let nota = prompt("Motivo de la inasistencia (opcional):", "");
             asistenciaData[key] = 'D';
@@ -423,18 +573,11 @@
                 asistenciaNotas[key] = nota.trim();
                 celda.title = `Nota: ${nota.trim()}`;
                 celda.innerHTML = '❌<span class="absence-note-dot"></span>';
-            } else {
-                delete asistenciaNotas[key];
-                celda.title = '';
-                celda.innerText = '❌';
-            }
+            } else { delete asistenciaNotas[key]; celda.title = ''; celda.innerText = '❌'; }
             celda.className = 'attendance-cell att-absent';
         } else {
-            asistenciaData[key] = '';
-            delete asistenciaNotas[key];
-            celda.className = 'attendance-cell';
-            celda.innerText = '';
-            celda.title = '';
+            asistenciaData[key] = ''; delete asistenciaNotas[key];
+            celda.className = 'attendance-cell'; celda.innerText = ''; celda.title = '';
         }
     }
 
@@ -442,7 +585,6 @@
         const mesSelect = document.getElementById('mesAsistencia');
         const nombreMes = mesSelect.options[mesSelect.selectedIndex].text;
         let texto = `📅 *CONTROL DE ASISTENCIA - SILM*%0A🗓️ Mes: ${nombreMes}%0A%0A`;
-        
         let hayInasistencias = false;
         const mes = parseInt(mesSelect.value);
         const anio = new Date().getFullYear();
@@ -462,149 +604,14 @@
                 texto += `👤 *${emp.nombre}*:%0A   Inasistencias: ${ausencias.join(', ')}%0A%0A`;
             }
         });
-
-        if (!hayInasistencias) {
-            texto += `✅ Sin inasistencias registradas para este mes.`;
-        }
-
+        if (!hayInasistencias) texto += `✅ Sin inasistencias registradas para este mes.`;
         window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     }
-    
-    function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
 
-    function cargarListas() {
-        document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-        document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
-        document.getElementById('selOperario').innerHTML = '<option value="">Seleccione operario...</option>' + db.personal.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-        
-        document.getElementById('filtroEdificio').innerHTML = '<option value="">Todos los edificios</option>' + db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-
-        const renderList = (tipo, containerId) => {
-            document.getElementById(containerId).innerHTML = db[tipo].map(item => `
-                <div class="list-item" onclick="verPerfil('${tipo}', ${item.id})">
-                    <div class="list-avatar">${getIniciales(item.nombre)}</div>
-                    <div class="list-info"><h4 class="list-title">${item.nombre}</h4><p class="list-subtitle">${item.direccion || item.descripcion || 'Sin descripción'}</p></div>
-                    ${item.calificacion ? `<div class="list-rating">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : ''}
-                </div>`).join('');
-        };
-        renderList('personal', 'list-personal'); 
-        renderList('supervisores', 'list-supervisores'); 
-        renderList('edificios', 'list-edificios');
-        
-        renderizarReportes(db.reportes);
-    }
-
-    function renderizarReportes(listaReportes) {
-        const contenedor = document.getElementById('list-reportes');
-        if(!listaReportes || listaReportes.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center; color:#6b7280; padding:20px;">No hay reportes registrados.</p>';
-            return;
-        }
-
-        const invertidos = [...listaReportes].reverse();
-
-        contenedor.innerHTML = invertidos.map(r => `
-            <div class="card" style="margin-bottom: 10px; padding: 14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                    <strong style="color:var(--primary); font-size:15px;">🏢 ${r.edificio || 'Edificio'}</strong>
-                    <span style="background:#fffbeb; color:#d97706; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">⭐ ${r.puntaje || '5.0'}</span>
-                </div>
-                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">📅 <strong>Fecha:</strong> ${r.fecha ? String(r.fecha).substring(0, 10) : 'N/A'}</p>
-                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👔 <strong>Supervisor:</strong> ${r.supervisor || 'N/A'}</p>
-                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👷 <strong>Operario:</strong> ${r.operario || 'N/A'}</p>
-                <p style="margin: 6px 0 0 0; font-size:13px; background:#f9fafb; padding:8px; border-radius:6px;">📝 <em>${r.observaciones || 'Sin observaciones'}</em></p>
-            </div>
-        `).join('');
-    }
-
-    function aplicarFiltrosReportes() {
-        const edificioFiltro = document.getElementById('filtroEdificio').value;
-        const fechaFiltro = document.getElementById('filtroFecha').value;
-
-        let filtrados = db.reportes.filter(r => {
-            let coincideEdificio = edificioFiltro === "" || r.edificio === edificioFiltro;
-            let coincideFecha = true;
-            if(fechaFiltro && r.fecha) {
-                coincideFecha = String(r.fecha).substring(0, 10) === fechaFiltro;
-            }
-            return coincideEdificio && coincideFecha;
-        });
-
-        renderizarReportes(filtrados);
-    }
-
-    function limpiarFiltrosReportes() {
-        document.getElementById('filtroEdificio').value = "";
-        document.getElementById('filtroFecha').value = "";
-        renderizarReportes(db.reportes);
-    }
-
-    function abrirModalAgregar() {
-        document.getElementById('addCampo1').value = ''; document.getElementById('addCampo2').value = ''; document.getElementById('addDesc').value = '';
-        if(tabActual === 'personal' || tabActual === 'supervisores') {
-            document.getElementById('modalAddTitle').innerText = `Nuevo ${tabActual === 'personal' ? 'Operario' : 'Supervisor'}`;
-            document.getElementById('lblCampo1').innerText = 'Nombre y Apellido';
-            document.getElementById('addCampo2').parentElement.style.display = 'none';
-        } else {
-            document.getElementById('modalAddTitle').innerText = 'Nuevo Edificio';
-            document.getElementById('lblCampo1').innerText = 'Nombre del Edificio'; document.getElementById('lblCampo2').innerText = 'Dirección';
-            document.getElementById('addCampo2').parentElement.style.display = 'block';
-        }
-        document.getElementById('addModal').classList.add('active');
-    }
-
-    async function guardarNuevoDato(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnGuardarAdd');
-        btn.innerText = 'Guardando...'; btn.disabled = true;
-        const id = Date.now();
-        const nombre = document.getElementById('addCampo1').value;
-        const desc = document.getElementById('addDesc').value;
-        let hoja, datosFila;
-
-        if (tabActual === 'edificios') { hoja = 'EDIFICIOS'; datosFila = [id, nombre, document.getElementById('addCampo2').value, desc]; } 
-        else { hoja = tabActual === 'personal' ? 'PERSONAL' : 'SUPERVISORES'; datosFila = [id, nombre, 5.0, 0, desc]; }
-
-        try {
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: hoja, datos: datosFila }) });
-            const resp = await fetch(APP_URL); const data = await resp.json();
-            db[tabActual] = data[tabActual.toLowerCase()]; cargarListas();
-            cerrarModal('addModal');
-        } catch (error) { alert('Error al guardar.'); } 
-        finally { btn.innerText = 'Guardar'; btn.disabled = false; }
-    }
-
-    function verPerfil(tipo, id) {
-        perfilActivo = { tipo: tipo, id: id };
-        const item = db[tipo].find(x => x.id == id);
-        document.getElementById('viewInitials').innerText = getIniciales(item.nombre); document.getElementById('viewTitle').innerText = item.nombre;
-        document.getElementById('viewSubtitle').innerText = tipo === 'edificios' ? item.direccion : `Evaluaciones: ${item.reportes}`;
-        document.getElementById('viewExtra').innerHTML = (item.calificacion ? `<div style="font-size:20px; color:#d97706; font-weight:bold; margin-bottom:10px;">⭐ ${Number(item.calificacion).toFixed(1)}</div>` : '') + `<strong>Descripción:</strong><br>${item.descripcion || 'Sin datos'}`;
-        
-        document.getElementById('btnEliminarRegistro').style.display = (usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') ? 'block' : 'none';
-        document.getElementById('viewModal').classList.add('active');
-    }
-
-    async function ejecutarEliminar() {
-        if(!confirm('¿Eliminar permanentemente este registro?')) return;
-        const btn = document.getElementById('btnEliminarRegistro');
-        btn.innerText = 'Eliminando...'; btn.disabled = true;
-        let nombreHoja = perfilActivo.tipo.toUpperCase();
-        try {
-            await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar', hoja: nombreHoja, id: perfilActivo.id }) });
-            db[perfilActivo.tipo] = db[perfilActivo.tipo].filter(x => x.id != perfilActivo.id);
-            cargarListas(); cerrarModal('viewModal');
-        } catch(error) { alert('Error al eliminar.'); } 
-        finally { btn.innerText = 'Eliminar Registro'; btn.disabled = false; }
-    }
-
-    function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    // --- CHECKLIST Y CÁMARA ---
+    // CHECKLIST & REPORTES
     document.getElementById('fechaVisita').valueAsDate = new Date();
     const puntos = ["1. Basura", "2. Veredas y yuyos", "3. Hall de entrada", "4. Vidrios y espejos", "5. Palieres y pisos", "6. Ascensores y rieles", "7. Escaleras", "8. Cuarto limpieza"];
     let reporteActual = {}; 
-
     const checklistContainer = document.getElementById('checklist-container');
     puntos.forEach((punto, index) => {
         reporteActual[index] = { estado: null, fotoSacada: false };
@@ -627,9 +634,7 @@
         document.getElementById(`btn-${estado}-${index}`).classList.add(`selected-${estado}`);
         reporteActual[index].estado = estado;
     }
-
     function abrirCamara(index) { document.getElementById(`input-foto-${index}`).click(); }
-
     function fotoTomada(index, input) {
         if(input.files && input.files[0]) {
             const btn = document.getElementById(`btn-foto-${index}`);
@@ -649,7 +654,6 @@
         pasoActual += direccion;
         document.getElementById(`step${pasoActual}`).classList.add('active');
         document.getElementById('btnPrev').disabled = pasoActual === 1;
-        
         const btnNext = document.getElementById('btnNext');
         if (pasoActual === 3) {
             btnNext.innerText = 'Finalizar y Enviar con GPS'; btnNext.onclick = finalizarReporteConGPS;
@@ -662,16 +666,10 @@
     function finalizarReporteConGPS() {
         const btnNext = document.getElementById('btnNext');
         btnNext.innerText = 'Obteniendo GPS...'; btnNext.disabled = true;
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const gpsLink = `https://maps.google.com/?q=${lat},${lon}`;
-                    enviarDatosFinales(gpsLink);
-                },
-                (error) => { enviarDatosFinales("GPS No Disponible"); },
+                (pos) => enviarDatosFinales(`https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`),
+                (err) => enviarDatosFinales("GPS No Disponible"),
                 { timeout: 10000 }
             );
         } else { enviarDatosFinales("GPS No Soportado"); }
@@ -685,7 +683,6 @@
             if(val.fotoSacada) { hayEvidencia = "Sí"; }
         });
         const puntaje = ptos > 0 ? (suma / ptos) : 5;
-
         const idEd = document.getElementById('selEdificio').value; const nEdificio = db.edificios.find(e => e.id == idEd).nombre;
         const idSup = document.getElementById('selSupervisor').value; const nSupervisor = db.supervisores.find(s => s.id == idSup).nombre;
         const idOp = document.getElementById('selOperario').value; const operario = db.personal.find(p => p.id == idOp);
@@ -694,60 +691,65 @@
         let nuevosRep = (Number(operario.reportes) || 0) + 1;
         let calActual = Number(operario.calificacion) || 5.0;
         let nuevaCal = ((calActual * (nuevosRep - 1)) + puntaje) / nuevosRep;
-
         const filaReporte = [fecha, nEdificio, nSupervisor, operario.nombre, puntaje.toFixed(1), obs, hayEvidencia, ubicacionGPS];
-
         ultimoReporteTexto = `📋 *REPORTE DE SUPERVISIÓN SILM*%0A📅 Fecha: ${fecha}%0A🏢 Edificio: ${nEdificio}%0A👔 Supervisor: ${nSupervisor}%0A👷 Operario: ${operario.nombre}%0A⭐ Calificación: ${puntaje.toFixed(1)} / 5.0%0A📝 Obs: ${obs || 'Ninguna'}%0A📍 Ubicación GPS: ${ubicacionGPS}`;
 
         try {
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'insertar', hoja: 'REPORTES', datos: filaReporte }) });
             await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ accion: 'actualizarCalificacion', hoja: 'PERSONAL', id: idOp, nuevaCalificacion: nuevaCal, nuevosReportes: nuevosRep }) });
-            
             document.getElementById('successDetails').innerText = `Edificio: ${nEdificio} | Operario: ${operario.nombre} | Nota: ${puntaje.toFixed(1)} ⭐`;
             document.getElementById('success-screen').classList.add('active');
-        } catch (error) {
-            alert('Error al enviar. Revisa tu conexión a internet.');
-            btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false;
+        } catch (error) { alert('Error al enviar.'); btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false; }
+    }
+
+    function renderizarReportes(listaReportes) {
+        const contenedor = document.getElementById('list-reportes');
+        if(!listaReportes || listaReportes.length === 0) {
+            contenedor.innerHTML = '<p style="text-align:center; color:#6b7280; padding:20px;">No hay reportes registrados.</p>';
+            return;
         }
+        contenedor.innerHTML = [...listaReportes].reverse().map(r => `
+            <div class="card" style="margin-bottom: 10px; padding: 14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <strong style="color:var(--primary); font-size:15px;">🏢 ${r.edificio || 'Edificio'}</strong>
+                    <span style="background:#fffbeb; color:#d97706; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">⭐ ${r.puntaje || '5.0'}</span>
+                </div>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">📅 <strong>Fecha:</strong> ${r.fecha ? String(r.fecha).substring(0, 10) : 'N/A'}</p>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👔 <strong>Supervisor:</strong> ${r.supervisor || 'N/A'}</p>
+                <p style="margin: 3px 0; font-size:13px; color:#4b5563;">👷 <strong>Operario:</strong> ${r.operario || 'N/A'}</p>
+                <p style="margin: 6px 0 0 0; font-size:13px; background:#f9fafb; padding:8px; border-radius:6px;">📝 <em>${r.observaciones || 'Sin observaciones'}</em></p>
+            </div>
+        `).join('');
+    }
+
+    function aplicarFiltrosReportes() {
+        const edificioFiltro = document.getElementById('filtroEdificio').value;
+        const fechaFiltro = document.getElementById('filtroFecha').value;
+        let filtrados = db.reportes.filter(r => {
+            let coincideEdificio = edificioFiltro === "" || r.edificio === edificioFiltro;
+            let coincideFecha = !fechaFiltro || (r.fecha && String(r.fecha).substring(0, 10) === fechaFiltro);
+            return coincideEdificio && coincideFecha;
+        });
+        renderizarReportes(filtrados);
+    }
+    function limpiarFiltrosReportes() {
+        document.getElementById('filtroEdificio').value = "";
+        document.getElementById('filtroFecha').value = "";
+        renderizarReportes(db.reportes);
     }
 
     async function reiniciarFormulario() {
         document.getElementById('success-screen').classList.remove('active');
-        
         document.getElementById(`step${pasoActual}`).classList.remove('active');
-        pasoActual = 1;
-        document.getElementById('step1').classList.add('active');
-        
+        pasoActual = 1; document.getElementById('step1').classList.add('active');
         document.getElementById('observacionesFinales').value = '';
-        const puntos = document.querySelectorAll('.checklist-item');
-        puntos.forEach((item, index) => {
-            document.getElementById(`btn-C-${index}`).className = 'status-btn';
-            document.getElementById(`btn-D-${index}`).className = 'status-btn';
-            const btnFooter = document.getElementById(`btn-foto-${index}`);
-            btnFooter.className = 'status-btn btn-camera';
-            btnFooter.innerHTML = '📸 Foto';
-            reporteActual[index] = { estado: null, fotoSacada: false };
-        });
-
-        const btnNext = document.getElementById('btnNext');
-        btnNext.innerText = 'Siguiente';
-        btnNext.disabled = false;
-        btnNext.onclick = () => cambiarPaso(1);
-
         try {
-            const respuesta = await fetch(APP_URL);
-            const data = await respuesta.json();
-            db.personal = data.personal || [];
-            db.supervisores = data.supervisores || [];
-            db.edificios = data.edificios || [];
-            db.reportes = data.reportes || [];
+            const res = await fetch(APP_URL); const data = await res.json();
+            db.personal = data.personal || []; db.supervisores = data.supervisores || []; db.edificios = data.edificios || []; db.reportes = data.reportes || [];
             cargarListas();
         } catch(e) {}
     }
-
-    function enviarWhatsApp() {
-        window.open(`https://api.whatsapp.com/send?text=${ultimoReporteTexto}`, '_blank');
-    }
+    function enviarWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${ultimoReporteTexto}`, '_blank'); }
 </script>
 </body>
 </html>
