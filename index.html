@@ -59,18 +59,18 @@
         .list-subtitle { font-size: 13px; color: #6b7280; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .list-rating { background: #fffbeb; color: #d97706; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid #fde68a; }
 
-        /* ESTILOS PARA LA TABLA DE ASISTENCIA (MATRIZ) */
+        /* ESTILOS PARA LA TABLA DE ASISTENCIA */
         .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 10px; }
         .attendance-table { border-collapse: collapse; width: max-content; white-space: nowrap; font-size: 14px; }
         .attendance-table th, .attendance-table td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; }
         .attendance-table th { background: #f8fafc; color: var(--primary); font-weight: 600; position: sticky; top: 0; z-index: 2; }
-        /* Primera columna fija (Nombre del empleado) */
         .attendance-table th:first-child, .attendance-table td:first-child { position: sticky; left: 0; background: white; z-index: 3; text-align: left; font-weight: 600; min-width: 150px; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
         .attendance-table th:first-child { z-index: 4; background: #f8fafc; }
-        .attendance-cell { cursor: pointer; user-select: none; font-size: 16px; width: 35px; height: 35px; transition: background 0.2s; }
+        .attendance-cell { cursor: pointer; user-select: none; font-size: 16px; width: 35px; height: 35px; transition: background 0.2s; position: relative; }
         .attendance-cell:hover { background: #f1f5f9; }
         .att-present { color: var(--success); font-weight: bold; background: #ecfdf5; }
         .att-absent { color: var(--danger); font-weight: bold; background: #fef2f2; }
+        .absence-note-dot { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; background: var(--danger); border-radius: 50%; }
 
         .bottom-tabs { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #e5e7eb; display: flex; z-index: 50; padding-bottom: env(safe-area-inset-bottom); height: 65px; }
         .tab-btn { flex: 1; padding: 4px 0; text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; border: none; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
@@ -175,12 +175,17 @@
         <div id="view-asistencia" class="view" style="padding: 15px;">
             <div class="card" style="margin-bottom: 10px;">
                 <h3>Calendario de Asistencia</h3>
-                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda para alternar: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente</p>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente (con nota)</p>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
                     <label style="margin:0;">Mes:</label>
                     <select id="mesAsistencia" onchange="generarCalendarioAsistencia()" style="padding: 8px;">
                         <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
                     </select>
+                </div>
+                <!-- BOTONES DE COMPARTIR E IMPRIMIR -->
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-submit" style="background: #25d366; margin-top:0; padding:10px; font-size:14px;" onclick="compartirAsistenciaWhatsApp()">📲 WhatsApp</button>
+                    <button class="btn-submit" style="background: #4b5563; margin-top:0; padding:10px; font-size:14px;" onclick="window.print()">🖨️ Imprimir / PDF</button>
                 </div>
             </div>
             <div class="table-responsive">
@@ -251,7 +256,8 @@
     const APP_URL = 'https://script.google.com/macros/s/AKfycbymOBLi3UeL2AabUpWnqt8s1Bg5ykCrnMz5_mrOmrGJkghRQfdBzgb5TDOOVKxSBjKFMg/exec';
     
     let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
-    let asistenciaData = {}; // Memoria local para la asistencia { "idOperario_dia": "C" o "D" }
+    let asistenciaData = {};   // { "idEmp_mes_dia": "C" o "D" }
+    let asistenciaNotas = {};  // { "idEmp_mes_dia": "Motivo..." }
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
@@ -267,7 +273,6 @@
             db.reportes = data.reportes || [];
             datosListos = true;
 
-            // Seleccionar mes actual por defecto en el selector
             const mesActual = new Date().getMonth();
             document.getElementById('mesAsistencia').value = mesActual;
         } catch (error) { alert("Error de conexión. Recarga la página."); }
@@ -317,10 +322,8 @@
                 if(selectSup.options[i].text === usuarioActual.nombre) { selectSup.selectedIndex = i; selectSup.disabled = true; break; }
             }
         } else if (usuarioActual.rango === 'rrhh') {
-            // Ocultar Control y Reportes para RRHH
             document.getElementById('tab-supervision').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
-            // Cambiar automáticamente a la pestaña Personal al ingresar
             switchTab('personal', document.getElementById('tab-personal'), 'Personal');
         }
     }
@@ -334,7 +337,6 @@
         element.classList.add('active');
         document.getElementById('appTitle').innerText = title;
         
-        // Botón "+ Nuevo" visible para Jefe y RRHH en las pestañas permitidas
         if ((usuarioActual.rango === 'jefe' || usuarioActual.rango === 'rrhh') && (viewId === 'personal' || viewId === 'supervisores' || viewId === 'edificios')) {
             document.getElementById('btnHeaderAdd').style.display = 'block';
         } else {
@@ -361,19 +363,15 @@
     function generarCalendarioAsistencia() {
         const mes = parseInt(document.getElementById('mesAsistencia').value);
         const anio = new Date().getFullYear();
-        // Obtener cantidad de días del mes seleccionado
         const totalDias = new Date(anio, mes + 1, 0).getDate();
-
         const tabla = document.getElementById('tablaAsistencia');
         
-        // 1. Cabecera de días (1 al 31)
         let htmlHead = '<tr><th>Personal / Día</th>';
         for (let d = 1; d <= totalDias; d++) {
             htmlHead += `<th>${d}</th>`;
         }
         htmlHead += '</tr>';
 
-        // 2. Filas por cada empleado en db.personal
         let htmlBody = '';
         if (db.personal.length === 0) {
             tabla.innerHTML = '<tr><td style="padding:20px; text-align:center;">No hay personal registrado.</td></tr>';
@@ -385,12 +383,21 @@
             for (let d = 1; d <= totalDias; d++) {
                 let key = `${emp.id}_${mes}_${d}`;
                 let estado = asistenciaData[key] || '';
+                let nota = asistenciaNotas[key] || '';
                 let claseCSS = '';
                 let simbolo = '';
-                if (estado === 'C') { claseCSS = 'att-present'; simbolo = '✔️'; }
-                else if (estado === 'D') { claseCSS = 'att-absent'; simbolo = '❌'; }
+                let tooltipAttr = nota ? `title="Nota: ${nota}"` : '';
+                let indicadorNota = nota ? '<span class="absence-note-dot"></span>' : '';
 
-                htmlBody += `<td class="attendance-cell ${claseCSS}" onclick="marcarAsistencia(${emp.id}, ${mes}, ${d}, this)">${simbolo}</td>`;
+                if (estado === 'C') { 
+                    claseCSS = 'att-present'; 
+                    simbolo = '✔️'; 
+                } else if (estado === 'D') { 
+                    claseCSS = 'att-absent'; 
+                    simbolo = '❌' + indicadorNota; 
+                }
+
+                htmlBody += `<td class="attendance-cell ${claseCSS}" ${tooltipAttr} onclick="marcarAsistencia(${emp.id}, ${mes}, ${d}, this)">${simbolo}</td>`;
             }
             htmlBody += '</tr>';
         });
@@ -402,20 +409,65 @@
         let key = `${empId}_${mes}_${dia}`;
         let actual = asistenciaData[key] || '';
 
-        // Ciclo: Vacío -> 'C' (✔️) -> 'D' (❌) -> Vacío
+        // Ciclo: Vacío -> 'C' (Presente) -> 'D' (Ausente con nota opcional) -> Vacío
         if (actual === '') {
             asistenciaData[key] = 'C';
+            delete asistenciaNotas[key];
             celda.className = 'attendance-cell att-present';
             celda.innerText = '✔️';
+            celda.title = '';
         } else if (actual === 'C') {
+            let nota = prompt("Motivo de la inasistencia (opcional):", "");
             asistenciaData[key] = 'D';
+            if (nota && nota.trim() !== '') {
+                asistenciaNotas[key] = nota.trim();
+                celda.title = `Nota: ${nota.trim()}`;
+                celda.innerHTML = '❌<span class="absence-note-dot"></span>';
+            } else {
+                delete asistenciaNotas[key];
+                celda.title = '';
+                celda.innerText = '❌';
+            }
             celda.className = 'attendance-cell att-absent';
-            celda.innerText = '❌';
         } else {
             asistenciaData[key] = '';
+            delete asistenciaNotas[key];
             celda.className = 'attendance-cell';
             celda.innerText = '';
+            celda.title = '';
         }
+    }
+
+    function compartirAsistenciaWhatsApp() {
+        const mesSelect = document.getElementById('mesAsistencia');
+        const nombreMes = mesSelect.options[mesSelect.selectedIndex].text;
+        let texto = `📅 *CONTROL DE ASISTENCIA - SILM*%0A🗓️ Mes: ${nombreMes}%0A%0A`;
+        
+        let hayInasistencias = false;
+        const mes = parseInt(mesSelect.value);
+        const anio = new Date().getFullYear();
+        const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+        db.personal.forEach(emp => {
+            let ausencias = [];
+            for (let d = 1; d <= totalDias; d++) {
+                let key = `${emp.id}_${mes}_${d}`;
+                if (asistenciaData[key] === 'D') {
+                    let detalleNota = asistenciaNotas[key] ? ` (${asistenciaNotas[key]})` : '';
+                    ausencias.push(`Día ${d}${detalleNota}`);
+                }
+            }
+            if (ausencias.length > 0) {
+                hayInasistencias = true;
+                texto += `👤 *${emp.nombre}*:%0A   Inasistencias: ${ausencias.join(', ')}%0A%0A`;
+            }
+        });
+
+        if (!hayInasistencias) {
+            texto += `✅ Sin inasistencias registradas para este mes.`;
+        }
+
+        window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     }
     
     function getIniciales(nombre) { return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX'; }
