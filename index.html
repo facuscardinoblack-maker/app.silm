@@ -450,15 +450,17 @@
         tabla.innerHTML = htmlHead + htmlBody;
     }
 
-    async function marcarAsistencia(empId, mes, dia, celda) {
+  async function marcarAsistencia(empId, mes, dia, celda) {
         let key = `${empId}_${mes}_${dia}`;
         let actual = asistenciaData[key] || '';
+        
         if (actual === '') {
-            asistenciaData[key] = 'C'; delete asistenciaNotas[key];
+            asistenciaData[key] = 'P'; // CAMBIO: de 'C' a 'P' (Presente)
+            delete asistenciaNotas[key];
             celda.className = 'attendance-cell att-present'; celda.innerText = '✔️'; celda.title = '';
-        } else if (actual === 'C') {
+        } else if (actual === 'P') { // CAMBIO: evalúa si es 'P' para cambiar a Ausente
             let nota = prompt("Motivo de la inasistencia (opcional):", "");
-            asistenciaData[key] = 'D';
+            asistenciaData[key] = 'A'; // CAMBIO: de 'D' a 'A' (Ausente)
             if (nota && nota.trim() !== '') {
                 asistenciaNotas[key] = nota.trim();
                 celda.title = `Nota: ${nota.trim()}`;
@@ -473,7 +475,6 @@
         // Guardar automáticamente en Google Sheets en segundo plano
         await sincronizarAsistenciaNube(empId, mes);
     }
-
     async function sincronizarAsistenciaNube(empId, mes) {
         const anio = new Date().getFullYear();
         const clave = `${empId}_${mes}_${anio}`;
