@@ -956,6 +956,59 @@ db.edificios.forEach(ed => {
     }
 
     function enviarWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${ultimoReporteTexto}`, '_blank'); }
+    function abrirModalGasto() {
+        document.getElementById('finConcepto').value = '';
+        document.getElementById('finMonto').value = '';
+        document.getElementById('finFecha').valueAsDate = new Date();
+        
+        // Llenamos el select con los edificios disponibles
+        const selectEd = document.getElementById('finEdificioSelect');
+        selectEd.innerHTML = '<option value="">Seleccione edificio...</option>' + 
+            db.edificios.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+            
+        document.getElementById('modalGastoFinanzas').classList.add('active');
+    }
+
+    async function guardarMovimientoFinanciero(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarMovimiento');
+        btn.innerText = 'Guardando...'; btn.disabled = true;
+
+        const tipo = document.getElementById('finTipo').value;
+        const edificioAsociado = document.getElementById('finEdificioSelect').value;
+        const concepto = document.getElementById('finConcepto').value;
+        const monto = document.getElementById('finMonto').value;
+        const fecha = document.getElementById('finFecha').value;
+
+        // Estructura de la fila para la hoja FINANZAS: ['id', 'fecha', 'tipo', 'concepto', 'monto', 'edificio_asociado']
+        const idUnico = Date.now();
+        const datosFila = [idUnico, fecha, tipo, concepto, monto, edificioAsociado];
+
+        try {
+            await fetch(APP_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    accion: 'insertar', 
+                    hoja: 'FINANZAS', 
+                    datos: datosFila 
+                }) 
+            });
+
+            // Recargamos los datos desde la nube para actualizar las tarjetas y tablas
+            const resp = await fetch(APP_URL); 
+            const data = await resp.json();
+            db.finanzas = data.finanzas || [];
+            
+            calcularFinanzasYRentabilidad();
+            cerrarModal('modalGastoFinanzas');
+            alert("Movimiento registrado con éxito.");
+        } catch (error) { 
+            alert('Error al guardar el movimiento financiero.'); 
+        } finally { 
+            btn.innerText = 'Guardar Movimiento'; 
+            btn.disabled = false; 
+        }
+    }
 </script>
 </body>
 </html>
