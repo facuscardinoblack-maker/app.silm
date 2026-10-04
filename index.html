@@ -315,7 +315,42 @@
             <button id="btnEliminarRegistro" class="btn-danger" style="display:none;" onclick="ejecutarEliminar()">Eliminar Registro</button>
         </div>
     </div>
-
+<!-- MODAL REGISTRAR MOVIMIENTO FINANCIERO -->
+    <div class="modal-overlay" id="modalGastoFinanzas">
+        <div class="modal-content">
+            <button class="close-modal" onclick="cerrarModal('modalGastoFinanzas')">×</button>
+            <h3 style="margin-top:0; color:var(--primary);">Registrar Movimiento Financiero</h3>
+            <form id="formFinanza" onsubmit="guardarMovimientoFinanciero(event)">
+                <div class="form-group">
+                    <label>Tipo de Movimiento</label>
+                    <select id="finTipo" required>
+                        <option value="Ingreso">Cobro / Ingreso</option>
+                        <option value="Gasto">Gasto Operativo / Insumos</option>
+                        <option value="Pendiente">Cobro Pendiente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Edificio Asociado</label>
+                    <select id="finEdificioSelect" required>
+                        <option value="">Seleccione edificio...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Concepto (Ej: Compra lavandina, Pago mensual)</label>
+                    <input type="text" id="finConcepto" required placeholder="Descripción breve">
+                </div>
+                <div class="form-group">
+                    <label>Monto ($)</label>
+                    <input type="number" id="finMonto" required placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="finFecha" required>
+                </div>
+                <button type="submit" class="btn-submit" id="btnGuardarMovimiento">Guardar Movimiento</button>
+            </form>
+        </div>
+    </div>
 <script>
     const APP_URL = 'https://script.google.com/macros/s/AKfycbwmtl-FdCDmx55IrV1Cmc3oyyLtknsXf0twjZAZphQ3wEyiooICMljy1SDe_XxHK5g_iA/exec';
     
