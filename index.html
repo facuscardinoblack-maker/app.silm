@@ -378,7 +378,7 @@
         document.getElementById('cajaPassword').style.display = (rango === 'jefe' || rango === 'rrhh') ? 'block' : 'none';
     }
 
-    function iniciarApp(e) {
+ function iniciarApp(e) {
         e.preventDefault();
         const nombreInput = document.getElementById('loginNombre').value.trim();
         const apellidoInput = document.getElementById('loginApellido').value.trim();
@@ -395,6 +395,9 @@
         } else if (rango === 'rrhh') {
             if (pass !== 'Rrhh2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
+        } else if (rango === 'finanzas') { // NUEVO: Validación para Finanzas
+            if (pass !== 'Finanzas2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
+            usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         } else if (rango === 'jefe') {
             if (pass !== 'Silm2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
@@ -408,10 +411,16 @@
         document.getElementById('login-screen').classList.add('hidden');
         cargarListas();
         
+        // Ocultamos todo por defecto o manejamos por roles
+        // Asegúrate de que las pestañas tengan sus respectivos ID en el HTML (ej: id="tab-finanzas", etc.)
+        
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
             document.getElementById('tab-asistencia').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
+            // Si agregaste la pestaña finanzas, ocúltala también aquí
+            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'none';
+            
             const selectSup = document.getElementById('selSupervisor');
             for(let i=0; i<selectSup.options.length; i++) {
                 if(selectSup.options[i].text === usuarioActual.nombre) { selectSup.selectedIndex = i; selectSup.disabled = true; break; }
@@ -419,7 +428,24 @@
         } else if (usuarioActual.rango === 'rrhh') {
             document.getElementById('tab-supervision').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
+            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'none';
             switchTab('personal', document.getElementById('tab-personal'), 'Personal');
+        } else if (usuarioActual.rango === 'finanzas') { // NUEVO: Vista exclusiva para Finanzas
+            // Ocultamos las pestañas operativas y dejamos solo finanzas (y las que necesite)
+            if(document.getElementById('tab-personal')) document.getElementById('tab-personal').style.display = 'none';
+            if(document.getElementById('tab-supervisores')) document.getElementById('tab-supervisores').style.display = 'none';
+            if(document.getElementById('tab-edificios')) document.getElementById('tab-edificios').style.display = 'none';
+            if(document.getElementById('tab-asistencia')) document.getElementById('tab-asistencia').style.display = 'none';
+            if(document.getElementById('tab-reportes')) document.getElementById('tab-reportes').style.display = 'none';
+            
+            // Activamos la vista de finanzas automáticamente al entrar
+            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'block';
+            switchTab('finanzas', document.getElementById('tab-finanzas'), 'Finanzas');
+            calcularFinanzasYRentabilidad(); // Calculamos al entrar
+        } else if (usuarioActual.rango === 'jefe') {
+            // El Jefe tiene acceso total, llamamos al cálculo de finanzas por si abre esa pestaña
+            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'block';
+            calcularFinanzasYRentabilidad();
         }
     }
 
