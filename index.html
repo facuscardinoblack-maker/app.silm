@@ -228,7 +228,55 @@
             <div class="list-container" id="list-reportes"></div>
         </div>
     </div>
+<!-- VISTA: FINANZAS -->
+        <div id="view-finanzas" class="view" style="display: none; padding: 15px;">
+            <div class="card" style="margin-bottom: 15px;">
+                <h3>Panel Financiero & Rentabilidad</h3>
+                <p style="font-size: 13px; color: #6b7280; margin: 0 0 15px 0;">Resumen general de ingresos, gastos y rentabilidad por edificio.</p>
+                
+                <!-- Tarjetas de Resumen -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; border-left: 4px solid #22c55e;">
+                        <span style="font-size: 12px; color: #166534; display: block;">Facturación Mes</span>
+                        <strong id="finFacturacion" style="font-size: 18px; color: #15803d;">$0</strong>
+                    </div>
+                    <div style="background: #fef2f2; padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                        <span style="font-size: 12px; color: #991b1b; display: block;">Gastos Totales</span>
+                        <strong id="finGastos" style="font-size: 18px; color: #b91c1c;">$0</strong>
+                    </div>
+                    <div style="background: #eff6ff; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <span style="font-size: 12px; color: #1e40af; display: block;">Cobros Pendientes</span>
+                        <strong id="finPendientes" style="font-size: 18px; color: #1d4ed8;">$0</strong>
+                    </div>
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid #64748b;">
+                        <span style="font-size: 12px; color: #334155; display: block;">Balance Neto</span>
+                        <strong id="finBalance" style="font-size: 18px; color: #0f172a;">$0</strong>
+                    </div>
+                </div>
 
+                <button class="btn-submit" style="background: #2563eb; margin-top: 0;" onclick="abrirModalGasto()">➕ Registrar Nuevo Movimiento / Gasto</button>
+            </div>
+
+            <!-- Tabla de Rentabilidad por Edificio -->
+            <div class="card">
+                <h4 style="margin-bottom: 10px;">🏢 Rentabilidad por Edificio</h4>
+                <div class="table-responsive">
+                    <table class="attendance-table" style="width: 100%; text-align: left; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 8px;">Edificio</th>
+                                <th style="padding: 8px;">Cobro</th>
+                                <th style="padding: 8px;">Costo</th>
+                                <th style="padding: 8px;">Rentabilidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaRentabilidadEdificios">
+                            <!-- Se llena por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     <!-- TABS INFERIORES -->
     <div class="bottom-tabs">
         <button id="tab-supervision" class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
