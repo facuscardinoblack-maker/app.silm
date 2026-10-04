@@ -107,28 +107,12 @@
                 <div class="form-group"><label>Apellido</label><input type="text" id="loginApellido" required placeholder="Ej: Scardino"></div>
                 <div class="form-group">
                     <label>Rango de Acceso</label>
-                     <div id="login-screen">
-        <h1 style="margin-bottom: 30px; font-size: 32px; font-weight: 800; letter-spacing: 2px;">SILM</h1>
-        <div class="login-box">
-            <h2>Iniciar Sesión</h2>
-            <form id="formLogin" onsubmit="iniciarApp(event)">
-                <div class="form-group"><label>Nombre</label><input type="text" id="loginNombre" required placeholder="Ej: Facundo"></div>
-                <div class="form-group"><label>Apellido</label><input type="text" id="loginApellido" required placeholder="Ej: Scardino"></div>
-                <div class="form-group">
-                    <label>Rango de Acceso</label>
                     <select id="loginRango" required onchange="verificarRango()">
-    <option value="supervisor">Supervisor (Solo Reportes)</option>
-    <option value="rrhh">Recursos Humanos (Personal, Edificios y Asistencia)</option>
-    <option value="finanzas">Finanzas (Facturación y Rentabilidad)</option>
-    <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
-</select>
-                </div>
-               <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Contraseña de acceso"></div
-                <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
-            </form>
-        </div>
-    </div>
-
+                        <option value="supervisor">Supervisor (Solo Reportes)</option>
+                        <option value="rrhh">Recursos Humanos (Personal, Edificios y Asistencia)</option>
+                        <option value="finanzas">Finanzas (Facturación y Rentabilidad)</option>
+                        <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
+                    </select>
                 </div>
                 <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Contraseña de acceso"></div>
                 <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
@@ -207,7 +191,7 @@
         <div id="view-asistencia" class="view" style="padding: 15px;">
             <div class="card" style="margin-bottom: 10px;">
                 <h3>Calendario de Asistencia</h3>
-                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda: Vacío ➡️ ✔️ Presente ➡️ ❌ Ausente (con nota). <em>Se guarda automáticamente en la nube.</em></p>
+                <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px 0;">Toca una celda para alternar asistencia. <em>Se guarda automáticamente en la nube.</em></p>
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
                     <label style="margin:0;">Mes:</label>
                     <select id="mesAsistencia" onchange="generarCalendarioAsistencia()" style="padding: 8px;">
@@ -244,9 +228,9 @@
             </div>
             <div class="list-container" id="list-reportes"></div>
         </div>
-    </div>
-<!-- VISTA: FINANZAS -->
-        <div id="view-finanzas" class="view" style="display: none; padding: 15px;">
+
+        <!-- VISTA: FINANZAS -->
+        <div id="view-finanzas" class="view" style="padding: 15px;">
             <div class="card" style="margin-bottom: 15px;">
                 <h3>Panel Financiero & Rentabilidad</h3>
                 <p style="font-size: 13px; color: #6b7280; margin: 0 0 15px 0;">Resumen general de ingresos, gastos y rentabilidad por edificio.</p>
@@ -270,8 +254,6 @@
                         <strong id="finBalance" style="font-size: 18px; color: #0f172a;">$0</strong>
                     </div>
                 </div>
-
-                <button class="btn-submit" style="background: #2563eb; margin-top: 0;" onclick="abrirModalGasto()">➕ Registrar Nuevo Movimiento / Gasto</button>
             </div>
 
             <!-- Tabla de Rentabilidad por Edificio -->
@@ -294,6 +276,8 @@
                 </div>
             </div>
         </div>
+    </div>
+
     <!-- TABS INFERIORES -->
     <div class="bottom-tabs">
         <button id="tab-supervision" class="tab-btn active" onclick="switchTab('supervision', this, 'Supervisión')"><i>📝</i><span>Control</span></button>
@@ -302,6 +286,7 @@
         <button id="tab-edificios" class="tab-btn" onclick="switchTab('edificios', this, 'Edificios')"><i>🏢</i><span>Edificios</span></button>
         <button id="tab-asistencia" class="tab-btn" onclick="switchTab('asistencia', this, 'Asistencia')"><i>📅</i><span>Asistencia</span></button>
         <button id="tab-reportes" class="tab-btn" onclick="switchTab('reportes', this, 'Historial')"><i>📊</i><span>Reportes</span></button>
+        <button id="tab-finanzas" class="tab-btn" style="display:none;" onclick="switchTab('finanzas', this, 'Finanzas')"><i>💰</i><span>Finanzas</span></button>
     </div>
 
     <!-- Modales de Agregar / Modificar -->
@@ -334,9 +319,9 @@
 <script>
     const APP_URL = 'https://script.google.com/macros/s/AKfycbwmtl-FdCDmx55IrV1Cmc3oyyLtknsXf0twjZAZphQ3wEyiooICMljy1SDe_XxHK5g_iA/exec';
     
-    let db = { personal: [], supervisores: [], edificios: [], reportes: [] };
-    let asistenciaData = {};   // { "idEmp_mes_dia": "C" o "D" }
-    let asistenciaNotas = {};  // { "idEmp_mes_dia": "Nota" }
+    let db = { personal: [], supervisores: [], edificios: [], reportes: [], finanzas: [] };
+    let asistenciaData = {};   
+    let asistenciaNotas = {};  
     let datosListos = false;
     let usuarioActual = { nombre: '', rango: '' };
     let perfilActivo = { tipo: '', id: null };
@@ -352,8 +337,8 @@
             db.supervisores = data.supervisores || [];
             db.edificios = data.edificios || [];
             db.reportes = data.reportes || [];
+            db.finanzas = data.finanzas || [];
             
-            // Cargar asistencia desde la nube
             if (data.asistencia) {
                 data.asistencia.forEach(row => {
                     if (row.clave && row.data) {
@@ -374,22 +359,22 @@
         } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
 
-  function verificarRango() {
+    function verificarRango() {
         const rango = document.getElementById('loginRango').value;
         const cajaPassword = document.getElementById('cajaPassword');
         const inputPassword = document.getElementById('loginPassword');
 
         if (rango === 'supervisor') {
             cajaPassword.style.display = 'none';
-            inputPassword.required = false; // Evita que el navegador pida la contraseña si es supervisor
+            inputPassword.required = false;
             inputPassword.value = '';
         } else {
             cajaPassword.style.display = 'block';
-            inputPassword.required = true; // Obligatorio para RRHH, Finanzas y Jefe
+            inputPassword.required = true;
         }
     }
 
- function iniciarApp(e) {
+    function iniciarApp(e) {
         e.preventDefault();
         const nombreInput = document.getElementById('loginNombre').value.trim();
         const apellidoInput = document.getElementById('loginApellido').value.trim();
@@ -406,7 +391,7 @@
         } else if (rango === 'rrhh') {
             if (pass !== 'Rrhh2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
-        } else if (rango === 'finanzas') { // NUEVO: Validación para Finanzas
+        } else if (rango === 'finanzas') {
             if (pass !== 'Finanzas2026') { alert("❌ ACCESO DENEGADO: Contraseña incorrecta."); return; }
             usuarioActual.nombre = nombreInput + ' ' + apellidoInput;
         } else if (rango === 'jefe') {
@@ -422,15 +407,11 @@
         document.getElementById('login-screen').classList.add('hidden');
         cargarListas();
         
-        // Ocultamos todo por defecto o manejamos por roles
-        // Asegúrate de que las pestañas tengan sus respectivos ID en el HTML (ej: id="tab-finanzas", etc.)
-        
         if (usuarioActual.rango === 'supervisor') {
             document.getElementById('tab-supervisores').style.display = 'none';
             document.getElementById('tab-asistencia').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
-            // Si agregaste la pestaña finanzas, ocúltala también aquí
-            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'none';
+            document.getElementById('tab-finanzas').style.display = 'none';
             
             const selectSup = document.getElementById('selSupervisor');
             for(let i=0; i<selectSup.options.length; i++) {
@@ -439,23 +420,21 @@
         } else if (usuarioActual.rango === 'rrhh') {
             document.getElementById('tab-supervision').style.display = 'none';
             document.getElementById('tab-reportes').style.display = 'none';
-            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'none';
+            document.getElementById('tab-finanzas').style.display = 'none';
             switchTab('personal', document.getElementById('tab-personal'), 'Personal');
-        } else if (usuarioActual.rango === 'finanzas') { // NUEVO: Vista exclusiva para Finanzas
-            // Ocultamos las pestañas operativas y dejamos solo finanzas (y las que necesite)
-            if(document.getElementById('tab-personal')) document.getElementById('tab-personal').style.display = 'none';
-            if(document.getElementById('tab-supervisores')) document.getElementById('tab-supervisores').style.display = 'none';
-            if(document.getElementById('tab-edificios')) document.getElementById('tab-edificios').style.display = 'none';
-            if(document.getElementById('tab-asistencia')) document.getElementById('tab-asistencia').style.display = 'none';
-            if(document.getElementById('tab-reportes')) document.getElementById('tab-reportes').style.display = 'none';
+        } else if (usuarioActual.rango === 'finanzas') {
+            document.getElementById('tab-supervision').style.display = 'none';
+            document.getElementById('tab-personal').style.display = 'none';
+            document.getElementById('tab-supervisores').style.display = 'none';
+            document.getElementById('tab-edificios').style.display = 'none';
+            document.getElementById('tab-asistencia').style.display = 'none';
+            document.getElementById('tab-reportes').style.display = 'none';
             
-            // Activamos la vista de finanzas automáticamente al entrar
-            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'block';
+            document.getElementById('tab-finanzas').style.display = 'flex';
             switchTab('finanzas', document.getElementById('tab-finanzas'), 'Finanzas');
-            calcularFinanzasYRentabilidad(); // Calculamos al entrar
+            calcularFinanzasYRentabilidad();
         } else if (usuarioActual.rango === 'jefe') {
-            // El Jefe tiene acceso total, llamamos al cálculo de finanzas por si abre esa pestaña
-            if(document.getElementById('tab-finanzas')) document.getElementById('tab-finanzas').style.display = 'block';
+            document.getElementById('tab-finanzas').style.display = 'flex';
             calcularFinanzasYRentabilidad();
         }
     }
@@ -476,15 +455,17 @@
         }
 
         if (viewId === 'asistencia') generarCalendarioAsistencia();
+        if (viewId === 'finanzas') calcularFinanzasYRentabilidad();
     }
 
-   function getAvatarHTML(nombre, foto) {
+    function getAvatarHTML(nombre, foto) {
         if (foto && typeof foto === 'string' && foto.trim().length > 10) {
             let srcFoto = foto.startsWith('data:image') ? foto : `data:image/jpeg;base64,${foto}`;
             return `<img src="${srcFoto}" alt="Foto" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
         }
         return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX';
     }
+
     function cargarListas() {
         document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
         document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
@@ -498,7 +479,60 @@
         renderizarReportes(db.reportes);
     }
 
-    // --- BUSCADOR RÁPIDO ---
+    function calcularFinanzasYRentabilidad() {
+        let totalFacturacion = 0;
+        let totalGastos = 0;
+        let totalPendientes = 0;
+
+        if (db.finanzas && Array.isArray(db.finanzas)) {
+            db.finanzas.forEach(mov => {
+                let monto = parseFloat(mov.monto) || 0;
+                let tipo = String(mov.tipo || '').toLowerCase();
+                if (tipo.includes('ingreso') || tipo.includes('cobro')) {
+                    totalFacturacion += monto;
+                } else if (tipo.includes('gasto') || tipo.includes('egreso')) {
+                    totalGastos += monto;
+                } else if (tipo.includes('pendiente')) {
+                    totalPendientes += monto;
+                }
+            });
+        }
+
+        let balance = totalFacturacion - totalGastos;
+
+        document.getElementById('finFacturacion').innerText = `$${totalFacturacion.toLocaleString()}`;
+        document.getElementById('finGastos').innerText = `$${totalGastos.toLocaleString()}`;
+        document.getElementById('finPendientes').innerText = `$${totalPendientes.toLocaleString()}`;
+        document.getElementById('finBalance').innerText = `$${balance.toLocaleString()}`;
+
+        let tbody = document.getElementById('tablaRentabilidadEdificios');
+        tbody.innerHTML = '';
+
+        if (db.edificios && db.edificios.length > 0) {
+            db.edificios.forEach(ed => {
+                let cobro = parseFloat(ed.cobro_mensual) || 0;
+                let costo = parseFloat(ed.costo_operativo) || 0;
+                let ganancia = cobro - costo;
+                let margen = cobro > 0 ? ((ganancia / cobro) * 100).toFixed(1) : 0;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${ed.nombre || 'Sin nombre'}</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; color: #16a34a;">$${cobro.toLocaleString()}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; color: #dc2626;">$${costo.toLocaleString()}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                        <span style="font-weight: bold; color: ${ganancia >= 0 ? '#2563eb' : '#dc2626'};">
+                            $${ganancia.toLocaleString()} (${margen}%)
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 15px; color: #6b7280;">No hay edificios cargados.</td></tr>`;
+        }
+    }
+
     function filtrarLista(tipo) {
         const query = document.getElementById(`search${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value.toLowerCase();
         const filtrados = db[tipo].filter(item => item.nombre.toLowerCase().includes(query) || (item.direccion && item.direccion.toLowerCase().includes(query)));
@@ -514,7 +548,6 @@
             </div>`).join('');
     }
 
-    // --- CALENDARIO DE ASISTENCIA SINCRONIZADO A LA NUBE ---
     function generarCalendarioAsistencia() {
         const mes = parseInt(document.getElementById('mesAsistencia').value);
         const anio = new Date().getFullYear();
@@ -541,8 +574,8 @@
                 let tooltipAttr = nota ? `title="Nota: ${nota}"` : '';
                 let indicadorNota = nota ? '<span class="absence-note-dot"></span>' : '';
 
-                if (estado === 'C') { claseCSS = 'att-present'; simbolo = '✔️'; }
-                else if (estado === 'D') { claseCSS = 'att-absent'; simbolo = '❌' + indicadorNota; }
+                if (estado === 'P') { claseCSS = 'att-present'; simbolo = '✔️'; }
+                else if (estado === 'A') { claseCSS = 'att-absent'; simbolo = '❌' + indicadorNota; }
 
                 htmlBody += `<td class="attendance-cell ${claseCSS}" ${tooltipAttr} onclick="marcarAsistencia(${emp.id}, ${mes}, ${d}, this)">${simbolo}</td>`;
             }
@@ -551,17 +584,17 @@
         tabla.innerHTML = htmlHead + htmlBody;
     }
 
-  async function marcarAsistencia(empId, mes, dia, celda) {
+    async function marcarAsistencia(empId, mes, dia, celda) {
         let key = `${empId}_${mes}_${dia}`;
         let actual = asistenciaData[key] || '';
         
         if (actual === '') {
-            asistenciaData[key] = 'P'; // CAMBIO: de 'C' a 'P' (Presente)
+            asistenciaData[key] = 'P'; 
             delete asistenciaNotas[key];
             celda.className = 'attendance-cell att-present'; celda.innerText = '✔️'; celda.title = '';
-        } else if (actual === 'P') { // CAMBIO: evalúa si es 'P' para cambiar a Ausente
+        } else if (actual === 'P') { 
             let nota = prompt("Motivo de la inasistencia (opcional):", "");
-            asistenciaData[key] = 'A'; // CAMBIO: de 'D' a 'A' (Ausente)
+            asistenciaData[key] = 'A'; 
             if (nota && nota.trim() !== '') {
                 asistenciaNotas[key] = nota.trim();
                 celda.title = `Nota: ${nota.trim()}`;
@@ -573,9 +606,9 @@
             celda.className = 'attendance-cell'; celda.innerText = ''; celda.title = '';
         }
 
-        // Guardar automáticamente en Google Sheets en segundo plano
         await sincronizarAsistenciaNube(empId, mes);
     }
+
     async function sincronizarAsistenciaNube(empId, mes) {
         const anio = new Date().getFullYear();
         const clave = `${empId}_${mes}_${anio}`;
@@ -614,7 +647,7 @@
             let ausencias = [];
             for (let d = 1; d <= totalDias; d++) {
                 let key = `${emp.id}_${mes}_${d}`;
-                if (asistenciaData[key] === 'D') {
+                if (asistenciaData[key] === 'A') {
                     let detalleNota = asistenciaNotas[key] ? ` (${asistenciaNotas[key]})` : '';
                     ausencias.push(`Día ${d}${detalleNota}`);
                 }
@@ -628,7 +661,6 @@
         window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     }
 
-    // --- MODALES Y ACCIONES RESTANTES ---
     function abrirModalAgregar() {
         modoEdicion = false; fotoBase64Actual = "";
         document.getElementById('modalAddTitle').innerText = `Nuevo ${tabActual === 'personal' ? 'Operario' : tabActual === 'supervisores' ? 'Supervisor' : 'Edificio'}`;
@@ -745,7 +777,6 @@
 
     function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // CHECKLIST Y SUPERVISIONES (MANTENIDO)
     document.getElementById('fechaVisita').valueAsDate = new Date();
     const puntos = ["1. Basura", "2. Veredas y yuyos", "3. Hall de entrada", "4. Vidrios y espejos", "5. Palieres y pisos", "6. Ascensores y rieles", "7. Escaleras", "8. Cuarto limpieza"];
     let reporteActual = {}; 
@@ -756,7 +787,7 @@
             <div class="checklist-item">
                 <h4>${punto}</h4>
                 <div class="status-options">
-                    <div class="status-btn" id="btn-C-${index}" onclick="setEstado(${index}, 'C')">✔️️ Bien</div>
+                    <div class="status-btn" id="btn-C-${index}" onclick="setEstado(${index}, 'C')">✔ Bien</div>
                     <div class="status-btn" id="btn-D-${index}" onclick="setEstado(${index}, 'D')">❌ Mal</div>
                     <div class="status-btn btn-camera" id="btn-foto-${index}" onclick="abrirCamara(${index})">📸 Foto</div>
                 </div>
@@ -764,6 +795,7 @@
             </div>
         `;
     });
+
     function setEstado(index, estado) {
         document.getElementById(`btn-C-${index}`).classList.remove('selected-C');
         document.getElementById(`btn-D-${index}`).classList.remove('selected-D');
@@ -778,6 +810,7 @@
             reporteActual[index].fotoSacada = true; 
         }
     }
+
     let pasoActual = 1;
     function cambiarPaso(direccion) {
         if(pasoActual === 1 && direccion === 1) {
@@ -797,6 +830,7 @@
         }
         document.querySelector('.main-content').scrollTop = 0;
     }
+
     function finalizarReporteConGPS() {
         const btnNext = document.getElementById('btnNext');
         btnNext.innerText = 'Obteniendo GPS...'; btnNext.disabled = true;
@@ -808,6 +842,7 @@
             );
         } else { enviarDatosFinales("GPS No Soportado"); }
     }
+
     async function enviarDatosFinales(ubicacionGPS) {
         let ptos = 0; let suma = 0; let hayEvidencia = "No";
         Object.values(reporteActual).forEach(val => {
@@ -832,6 +867,7 @@
             document.getElementById('success-screen').classList.add('active');
         } catch (error) { alert('Error al enviar.'); btnNext.innerText = 'Intentar de nuevo'; btnNext.disabled = false; }
     }
+
     function renderizarReportes(listaReportes) {
         const contenedor = document.getElementById('list-reportes');
         if(!listaReportes || listaReportes.length === 0) {
@@ -851,6 +887,7 @@
             </div>
         `).join('');
     }
+
     function aplicarFiltrosReportes() {
         const edificioFiltro = document.getElementById('filtroEdificio').value;
         const fechaFiltro = document.getElementById('filtroFecha').value;
@@ -861,11 +898,13 @@
         });
         renderizarReportes(filtrados);
     }
+
     function limpiarFiltrosReportes() {
         document.getElementById('filtroEdificio').value = "";
         document.getElementById('filtroFecha').value = "";
         renderizarReportes(db.reportes);
     }
+
     async function reiniciarFormulario() {
         document.getElementById('success-screen').classList.remove('active');
         document.getElementById(`step${pasoActual}`).classList.remove('active');
@@ -877,6 +916,7 @@
             cargarListas();
         } catch(e) {}
     }
+
     function enviarWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${ultimoReporteTexto}`, '_blank'); }
 </script>
 </body>
