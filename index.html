@@ -514,7 +514,7 @@
         renderizarReportes(db.reportes);
     }
 
-    function calcularFinanzasYRentabilidad() {
+  function calcularFinanzasYRentabilidad() {
         let totalFacturacion = 0;
         let totalGastos = 0;
         let totalPendientes = 0;
@@ -544,33 +544,31 @@
         tbody.innerHTML = '';
 
         if (db.edificios && db.edificios.length > 0) {
-         // Dentro de la función calcularFinanzasYRentabilidad(), modifica el loop de edificios:
-db.edificios.forEach(ed => {
-    let cobro = parseFloat(ed.cobro_mensual) || 0;
-    let costo = parseFloat(ed.costo_operativo) || 0;
-    let ganancia = cobro - costo;
-    let margen = cobro > 0 ? ((ganancia / cobro) * 100).toFixed(1) : 0;
+            db.edificios.forEach(ed => {
+                let cobro = parseFloat(ed.cobro_mensual) || 0;
+                let costo = parseFloat(ed.costo_operativo) || 0;
+                let ganancia = cobro - costo;
+                let margen = cobro > 0 ? ((ganancia / cobro) * 100).toFixed(1) : 0;
 
-    let tr = document.createElement('tr');
-    tr.style.cursor = 'pointer';
-    tr.onclick = () => abrirFichaEdificio(ed.id); // <-- NUEVO: Al hacer clic abre su detalle
-    tr.innerHTML = `
-        <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${ed.nombre || 'Sin nombre'}</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; color: #16a34a;">$${cobro.toLocaleString()}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; color: #dc2626;">$${costo.toLocaleString()}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">
-            <span style="font-weight: bold; color: ${ganancia >= 0 ? '#2563eb' : '#dc2626'};">
-                $${ganancia.toLocaleString()} (${margen}%)
-            </span>
-        </td>
-    `;
-    tbody.appendChild(tr);
-});
+                let tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => abrirFichaEdificio(ed.id);
+                tr.innerHTML = `
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${ed.nombre || 'Sin nombre'}</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; color: #16a34a;">$${cobro.toLocaleString()}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; color: #dc2626;">$${costo.toLocaleString()}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                        <span style="font-weight: bold; color: ${ganancia >= 0 ? '#2563eb' : '#dc2626'};">
+                            $${ganancia.toLocaleString()} (${margen}%)
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         } else {
             tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 15px; color: #6b7280;">No hay edificios cargados.</td></tr>`;
         }
     }
-
     function filtrarLista(tipo) {
         const query = document.getElementById(`search${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value.toLowerCase();
         const filtrados = db[tipo].filter(item => item.nombre.toLowerCase().includes(query) || (item.direccion && item.direccion.toLowerCase().includes(query)));
