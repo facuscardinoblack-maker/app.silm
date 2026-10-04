@@ -377,13 +377,13 @@
         if (viewId === 'asistencia') generarCalendarioAsistencia();
     }
 
-    function getAvatarHTML(nombre, foto) {
-        if (foto && foto.startsWith('data:image')) {
-            return `<img src="${foto}" alt="Foto">`;
+   function getAvatarHTML(nombre, foto) {
+        if (foto && typeof foto === 'string' && foto.trim().length > 10) {
+            let srcFoto = foto.startsWith('data:image') ? foto : `data:image/jpeg;base64,${foto}`;
+            return `<img src="${srcFoto}" alt="Foto" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
         }
         return nombre ? nombre.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'XX';
     }
-
     function cargarListas() {
         document.getElementById('selEdificio').innerHTML = '<option value="">Seleccione edificio...</option>' + db.edificios.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
         document.getElementById('selSupervisor').innerHTML = '<option value="">Seleccione supervisor...</option>' + db.supervisores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
