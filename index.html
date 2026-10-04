@@ -374,9 +374,19 @@
         } catch (error) { alert("Error de conexión. Recarga la página."); }
     };
 
-    function verificarRango() {
+  function verificarRango() {
         const rango = document.getElementById('loginRango').value;
-        document.getElementById('cajaPassword').style.display = (rango === 'jefe' || rango === 'rrhh') ? 'block' : 'none';
+        const cajaPassword = document.getElementById('cajaPassword');
+        const inputPassword = document.getElementById('loginPassword');
+
+        if (rango === 'supervisor') {
+            cajaPassword.style.display = 'none';
+            inputPassword.required = false; // Evita que el navegador pida la contraseña si es supervisor
+            inputPassword.value = '';
+        } else {
+            cajaPassword.style.display = 'block';
+            inputPassword.required = true; // Obligatorio para RRHH, Finanzas y Jefe
+        }
     }
 
  function iniciarApp(e) {
