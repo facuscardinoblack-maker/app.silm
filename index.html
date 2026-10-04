@@ -117,10 +117,11 @@
                 <div class="form-group">
                     <label>Rango de Acceso</label>
                     <select id="loginRango" required onchange="verificarRango()">
-                        <option value="supervisor">Supervisor (Solo Reportes)</option>
-                        <option value="rrhh">Recursos Humanos (Personal, Edificios y Asistencia)</option>
-                        <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
-                    </select>
+    <option value="supervisor">Supervisor (Solo Reportes)</option>
+    <option value="rrhh">Recursos Humanos (Personal, Edificios y Asistencia)</option>
+    <option value="finanzas">Finanzas (Facturación y Rentabilidad)</option>
+    <option value="jefe">Jefe de Supervisión (Acceso Total)</option>
+</select>
                 </div>
                 <div class="form-group" id="cajaPassword" style="display: none;"><label>Contraseña</label><input type="password" id="loginPassword" placeholder="Contraseña de acceso"></div>
                 <button type="submit" id="btnIngresar" class="login-btn">Ingresar</button>
